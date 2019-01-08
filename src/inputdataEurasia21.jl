@@ -1,4 +1,4 @@
-using HDF5, MAT
+using HDF5, MAT, DelimitedFiles, Statistics, Dates, TimeZones
 
  # :NOR,:FRA,:GER,:UK,:MED,:BAL,:SPA,:CEN,:BUK,:TCC,:KZK,:CAS,:RU_C,:RU_SW,:RU_VL,:CH_N,:CH_NE,:CH_E,:CH_SC,:CH_SW,:CH_NW
  # makesets(hourinfo) = makesets([:NOR, :FRA, :GER, :UK, :MED, :BAL, :SPA, :CEN, :CH_N, :CH_NE, :CH_E, :CH_SC, :CH_SW, :CH_NW], hourinfo)
@@ -88,39 +88,29 @@ function makeparameters(sets, hourinfo)
 
 	path = joinpath(dirname(@__FILE__), "..")
 
-	# this old demand data is only used to get hourly demand distribution (annual demand is scaled to SSP data later)
-	# demand data is not currently based on same year as solar & wind data!!!
-	file = h5open("$path/inputdata/demand_Europe10.h5", "r")
-	hourlydemandEU::Matrix{Float64} = read(file, "demand")'/1000
-	#distance = read(file, "distance")		# not used yet
-	close(file)
-
-	demand_EU = ten2eight(reducehours(hourlydemandEU, 2, hourinfo))			# GW
-	
-	# map China regions to Europe regions
-	# [:NOR, :FRA, :GER, :UK, :MED, :BAL, :SPA, :CEN]	
-	# [:North, :Northeast, :East, :SouthCentral, :Southwest, :Northwest]
-	mapped = [1,6,8,3,2,7] 	#[:NOR, :BAL, :CEN, :GER, :FRA, :SPA]	
-	demand_china = demand_EU[mapped,:]
-	# China has one time zone 7 hours behind central Europe (6 during summer)
-	# shift EU demand 6 hours (choose 6 rather than 7 because divisible by time periods 1,3,6)
-	shiftperiods = 6 ÷ hoursperperiod
-	demand_china[:,1:nhours] = [demand_china[:,shiftperiods+1:nhours] demand_china[:,1:shiftperiods]]
-
-	# Ditto for Central Asia (CAS)
-	# [:BUK,:TCC,:KZK,:CAS,:RU_C,:RU_SW,:RU_VL]
-	mapped = [4,7,8,6,2,3,5] 	#[:UK, :SPA, :CEN, :BAL, :FRA, :GER, :MED]	
-	demand_CAS = demand_EU[mapped,:]
-	shiftperiods = 3 ÷ hoursperperiod
-	demand_CAS[:,1:nhours] = [demand_CAS[:,shiftperiods+1:nhours] demand_CAS[:,1:shiftperiods]]
-
+	# read regional distances and SSP data from Matlab file
 	distancevars = matread("$path/inputdata/distances_eurasia21.mat")
 	population = vec(distancevars["population"])	# Mpeople in SSP2 2050
 	sspdemand = vec(distancevars["demand"])			# TWh/year (demand in SSP2 2050 major regions downscaled to countries using BP 2017 stats)
 
-	demand = AxisArray([demand_EU; demand_CAS; demand_china], REGION, HOUR)		# GW
-	for r = 1:numregions
-		demand[r,:] = demand[r,:]/mean(demand[r,:]) * sspdemand[r]/8760*1000
+	demand = AxisArray(zeros(numregions, nhours), REGION, HOUR)		# GW
+
+	# read synthetic demand data (using local time) and shift to UTC
+	# (note: not currently based on same year as solar & wind data!!!)
+	# if time zone code errors then run TimeZones.TZData.compile(max_year=2200), see https://timezonesjl.readthedocs.io/en/stable/faq/
+	zones = ["Europe/Oslo","Europe/Paris","Europe/Berlin","Europe/London","Europe/Rome","Europe/Warsaw","Europe/Madrid","Europe/Budapest","Europe/Sofia","Europe/Istanbul","Asia/Almaty","Asia/Ashgabat","Europe/Moscow","Europe/Moscow","Europe/Moscow","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai"]	
+	hourrange = DateTime(2050,1,1,0):Hour(1):DateTime(2050,12,31,23)
+	utc = [ZonedDateTime(h, TimeZone("UTC")) for h in hourrange]
+	for (i,reg) in enumerate(REGION)
+		data = readdlm("$path/inputdata/syntheticdemand/synthetic2050_region$(i)_$reg.csv", ',')
+		demandlocaltime = data[2:end, 2]
+		timezone = TimeZone(zones[i])
+		localtime = [astimezone(ut, timezone) for ut in utc]
+		localoffset = [Dates.value.(lt.zone.offset)÷3600 for lt in localtime]
+		indexoffset = mod.((1:8760) + localoffset .- 1, 8760) .+ 1
+		demandutc = demandlocaltime[indexoffset]
+		demand[i,:] = reducehours(demandutc, 1, hourinfo) * 1000
+		# println("$reg ($i): ", sspdemand[i], " ", mean(demand[i,:])*8760/1000)	# check total regional demand
 	end
 
 	hydrovars = matread("$path/inputdata/GISdata_hydro_eurasia21.mat")
@@ -256,6 +246,15 @@ function makeparameters(sets, hourinfo)
 	for k in [:wind,:pv,:csp]
 		investcost[k,6:10] .= baseinvestcost[k]*1.1
 	end
+
+	# # check demand/solar synchronization
+	# plotly()
+	# for r = 1:numregions
+	# 	tt1 = 8760÷2÷hoursperperiod		# test winter, spring, summer (÷12, ÷3, ÷2)
+	# 	tt = tt1:tt1+2*24÷hoursperperiod
+	# 	qq = [demand[r,tt] maximum(cf[r,:pv,1:5,tt],dims=1)']
+	# 	display(plot(qq./maximum(qq,dims=1), size=(1850,950)))
+	# end
 
 	return Params(cf, transmissionlosses, demand, hydrocapacity, cfhydroinflow, capacitylimits,
 		efficiency, rampingrate, dischargetime, initialhydrostoragelevel, minflow_existinghydro, emissionsCO2,
