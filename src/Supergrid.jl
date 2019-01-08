@@ -23,8 +23,8 @@ defaultoptions() = Dict(
 		:solver => :cplex,
 		:threads => 3,
 		:showsolverlog => true,
-		:rampingconstraints => true,
-		:rampingcosts => true,
+		:rampingconstraints => false,
+		:rampingcosts => false,
 	)
 
 buildmodel(tax, interval; optionlist...) = buildmodel(; carbontax=float(tax), sampleinterval=interval, optionlist...)
