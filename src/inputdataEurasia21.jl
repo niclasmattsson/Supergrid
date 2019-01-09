@@ -181,7 +181,7 @@ function makeparameters(sets, hourinfo)
 		:coal			1600		3				48			30			0.4			0.15
 		:bioGT			500			1				10			30			0.4			1
 		:bioCCGT		800			1				16			30			0.6			0.3
-		:nuclear		5000		2				150			50			0.4			0.05
+		:nuclear		5000		3				150			50			0.4			0.05
 		:wind			1200		0				36			25			1			1
 		:offwind		2000		0				60			25			1			1
 		:transmission	NaN			0				NaN			50			NaN			1
@@ -200,7 +200,17 @@ function makeparameters(sets, hourinfo)
 	rampingrate = AxisArray(techdata[:,6], techs)
 	# rampingrate[:] .= 1								# disable all ramping constraints
 
-	fuelcost = AxisArray(Float64[0, 8, 30, 60, 8], [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
+	# fuel cost references:
+	# 1. https://www.gov.uk/government/statistical-data-sets/prices-of-fuels-purchased-by-major-power-producers
+	# 2. https://oilprice.com/Energy/Natural-Gas/European-Natural-Gas-Prices-Are-Set-To-Rise-Further.html
+	# 3. https://www.bloomberg.com/news/articles/2018-09-03/coal-nears-100-in-europe-as-china-s-power-demand-draws-in-fuel
+	# 4. https://www.frisch.uio.no/ressurser/LIBEMOD/pdf/phase_out_28mai2015_golombek_powerpoint.pdf
+	# Sepulveda/Jenkins:  gas & biogas 21 €/MWh, uranium 3 €/MWh
+	# 1: coal 11-12 €/MWh, gas 19-21 €/MWh,  2: gas 20-30 €/MWh,  3: coal 70-90 €/ton = (25 MJ/kg) = 2.8-3.6 €/GJ = 10-13 €/MWh
+	# 4: gas 45*.5 = 22 €/MWh, coal 22.3*.4 = 9 €/MWh, bio 26.4*.4 = 11 €/MWh, nuclear 6.7*.35 = 2.3 €/MWh
+	
+	# original assumptions:  [0, 8, 30, 60, 8] for [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
+	fuelcost = AxisArray(Float64[0, 12, 22, 30, 3], [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
 
 	crf = AxisArray(discountrate ./ (1 .- 1 ./(1+discountrate).^lifetime), techs)
 
