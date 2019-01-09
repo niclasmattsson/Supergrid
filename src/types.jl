@@ -31,6 +31,7 @@ struct Params
 	crf							::AxisArray{Float64,1}
 	fixedcost					::AxisArray{Float64,1}
 	transmissioncost			::AxisArray{Float64,2}
+	transmissionfixedcost		::AxisArray{Float64,2}
 	hydroeleccost				::AxisArray{Float64,2}
 end
 
