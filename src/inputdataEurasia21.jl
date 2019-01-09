@@ -211,6 +211,7 @@ function makeparameters(sets, hourinfo)
 	
 	# original assumptions:  [0, 8, 30, 60, 8] for [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
 	fuelcost = AxisArray(Float64[0, 12, 22, 30, 3], [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
+	# OK for now, but need to find references for biogas cost
 
 	crf = AxisArray(discountrate ./ (1 .- 1 ./(1+discountrate).^lifetime), techs)
 
