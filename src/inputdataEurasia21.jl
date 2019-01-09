@@ -163,7 +163,7 @@ function makeparameters(sets, hourinfo)
 
 	connected[3,19] = connected[19,3] = true
 
-	# from Bogdanov & Breyer (2016) "North-East Asian Super Grid...",  fixed costs neglected for now
+	# from Bogdanov & Breyer (2016) "North-East Asian Super Grid..."
 	transmissioncostdata = connected .* (180 .+ 0.612*distances) .+ connectedoffshore .* (180 .+ 0.992*distances)
 	transmissionfixedcostdata = connected .* (1.8 .+ 0.0075*distances) .+ connectedoffshore .* (1.8 .+ 0.0010*distances)
 	transmissioninvestcost = AxisArray(transmissioncostdata, REGION, REGION)		# €/kW
@@ -185,7 +185,7 @@ function makeparameters(sets, hourinfo)
 		:offwind		2000		0				100			25			1			1
 		:transmission	NaN			0				NaN			50			NaN			1
 		:battery		1200		0				0			10			0.85		1	# 8h discharge time, 1200 €/kW = 150 €/kWh
-		:pv				600			0				19			25			1			1
+		:pv				800			0				19			25			1			1
 		:csp			1200		0				50			30			1			1	# add CSP data later
 		# :hydroRoR and :hydroDam are sunk costs
 		:hydro			10			0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 

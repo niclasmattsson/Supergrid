@@ -51,9 +51,9 @@ function showresults(model::ModelInfo)
 			lcoe = NamedArray(collect([regcost; totcost]'), (["system cost (€/MWh)"], [REGION; :TOTAL]))
 			display(lcoe)
 
-			display(groupedbar(String.(REGION),collect(annualelec[displayorder,1:end-1]'/1000), labels=techlabels, bar_position = :stack, size=(1850,950), line=0, tickfont=16, legendfont=16, color_palette=palette))
+			display(groupedbar(String.(REGION),collect(annualelec[displayorder,1:end-1]'/1000), labels=techlabels, bar_position = :stack, size=(1850,950), line=0, tickfont=14, legendfont=14, color_palette=palette))
 			totelec = [sumdimdrop(annualelec[:,1:8],dims=2) sumdimdrop(annualelec[:,9:15],dims=2) sumdimdrop(annualelec[:,16:21],dims=2) annualelec[:,:TOTAL]]
-			display(groupedbar(["EU","CAS","China","TOTAL"],collect(totelec[displayorder,:]'/1000), labels=techlabels, bar_position = :stack, size=(500,950), line=0, tickfont=16, legendfont=16, color_palette=palette))
+			display(groupedbar(["EU","CAS","China","TOTAL"],collect(totelec[displayorder,:]'/1e6), labels=techlabels, bar_position = :stack, size=(500,950), line=0, tickfont=14, legendfont=14, color_palette=palette))
 			return
 		end
 
