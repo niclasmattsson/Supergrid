@@ -108,7 +108,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 		TwoWayStreet[r1 in REGION, r2 in REGION],
 			TransmissionCapacity[r1,r2] == TransmissionCapacity[r2,r1] 
 
-		NoTransmission[r1 in REGION, r2 in REGION; transmissioncost[r1,r2] == 0],
+		NoTransmission[r1 in REGION, r2 in REGION; transmissioninvestcost[r1,r2] == 0],
 			TransmissionCapacity[r1,r2] == 0
 
 		Calculate_FuelUse[r in REGION, f in FUEL; f != :_],
