@@ -172,30 +172,29 @@ function makeparameters(sets, hourinfo)
 	transmissionlosses = AxisArray(transmissionlossdata, REGION, REGION)
 	smalltransmissionpenalty = 0.1		# €/MWh elec
 
-	# from Sepulveda & Jenkins (2018) "The role of firm low carbon electricity..."
+	# PV and battery costs have high/mid/low costs:  high = 1.5*mid, low = 0.5*mid
 	techdata = [
-		#				investcost (high/mid/low)	variablecost	fixedcost	lifetime	efficiency	rampingrate
-		#				$/kW						$/MWh elec		$/kW/year	years					share of capacity per hour
-		:gasGT			880  880  780				1				14.25		30			0.43		1
-		:gasCCGT		1000 1000 920				1				19.4		30			0.58		0.3
-		:coal			1700 1700 1700				0				80			35			0.4			0.15
-		:bioGT			890  890  790				0.7				50			30			0.4			1
-		:bioCCGT		760							0.8				50			30			0.7			0.3
-		:nuclear		5100						0				160			60			0.4			0.05
-		:wind			1400						0				44			25			1			1
-		:offwind		2000						0				100			25			1			1
-		:transmission	NaN							0				NaN			50			NaN			1
-		:battery		1200						0				0			10			0.85		1	# 8h discharge time, 1200 €/kW = 150 €/kWh
-		:pv				600							0				19			25			1			1
-		:csp			1200						0				50			30			1			1	# add CSP data later
-		:hydro			10							0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 
+		#				investcost 	variablecost	fixedcost	lifetime	efficiency	rampingrate
+		#				€/kW		€/MWh elec		€/kW/year	years					share of capacity per hour
+		:gasGT			500			1				10			30			0.4			1
+		:gasCCGT		800			1				16			30			0.6			0.3
+		:coal			1600		3				48			30			0.4			0.15
+		:bioGT			500			1				10			30			0.4			1
+		:bioCCGT		800			1				16			30			0.6			0.3
+		:nuclear		5000		2				150			50			0.4			0.05
+		:wind			1200		0				36			25			1			1
+		:offwind		2000		0				60			25			1			1
+		:transmission	NaN			0				NaN			50			NaN			1
+		:battery		1200		0				12			10			0.9			1	# 8h discharge time, 1200 €/kW = 150 €/kWh
+		:pv				800			0				16			25			1			1
+		:csp			1200		0				36			30			1			1	# add CSP data later
+		:hydro			10			0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 
 	]
-	USDtoEUR = 1/1.2											# assume 1 EUR = 1.2 USD 
 	techs = techdata[:,1]
 	techdata = Float64.(techdata[:,2:end])
-	baseinvestcost = AxisArray(techdata[:,1]*USDtoEUR, techs)	# €/kW
-	variablecost = AxisArray(techdata[:,2]*USDtoEUR, techs)		# €/MWh elec
-	fixedcost = AxisArray(techdata[:,3]*USDtoEUR, techs)		# €/kW/year
+	baseinvestcost = AxisArray(techdata[:,1], techs)	# €/kW
+	variablecost = AxisArray(techdata[:,2], techs)		# €/MWh elec
+	fixedcost = AxisArray(techdata[:,3], techs)		# €/kW/year
 	lifetime = AxisArray(techdata[:,4], techs)					# years
 	efficiency = AxisArray(techdata[:,5], techs)
 	rampingrate = AxisArray(techdata[:,6], techs)
