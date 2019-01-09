@@ -194,11 +194,11 @@ function makeparameters(sets, hourinfo)
 	techdata = Float64.(techdata[:,2:end])
 	baseinvestcost = AxisArray(techdata[:,1], techs)	# €/kW
 	variablecost = AxisArray(techdata[:,2], techs)		# €/MWh elec
-	fixedcost = AxisArray(techdata[:,3], techs)		# €/kW/year
-	lifetime = AxisArray(techdata[:,4], techs)					# years
+	fixedcost = AxisArray(techdata[:,3], techs)			# €/kW/year
+	lifetime = AxisArray(techdata[:,4], techs)			# years
 	efficiency = AxisArray(techdata[:,5], techs)
 	rampingrate = AxisArray(techdata[:,6], techs)
-	# rampingrate[:] .= 1										# disable all ramping constraints
+	# rampingrate[:] .= 1								# disable all ramping constraints
 
 	fuelcost = AxisArray(Float64[0, 8, 30, 60, 8], [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
 
