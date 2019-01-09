@@ -172,39 +172,38 @@ function makeparameters(sets, hourinfo)
 	transmissionlosses = AxisArray(transmissionlossdata, REGION, REGION)
 	smalltransmissionpenalty = 0.1		# €/MWh elec
 
-	investdata = [
-		#				investcost	variablecost	fixedcost	lifetime	efficiency	rampingrate
-		#				€/kW		€/MWh elec		€/kW/year	years					share of capacity per hour
-		:gasGT			380			0.7				50			30			0.4			1
-		:gasCCGT		760			0.8				50			30			0.7			0.3
-		:coal			1400		0				80			35			0.4			0.15
-		:bioGT			380			0.7				50			30			0.4			1
-		:bioCCGT		760			0.8				50			30			0.7			0.3
-		:nuclear		5100		0				160			60			0.4			0.05
-		:wind			1400		0				44			25			1			1
-		:offwind		2000		0				100			25			1			1
-		:transmission	NaN			0				NaN			50			NaN			1
-		:battery		1200		0				0			10			0.85		1	# 8h discharge time, 1200 €/kW = 150 €/kWh
-		:pv				600			0				19			25			1			1
-		:csp			1200		0				50			30			1			1	# add CSP data later
-		# :hydroRoR and :hydroDam are sunk costs
-		:hydro			10			0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 
-		# :hydroRoR		0			0				0			80			1
-		# :hydroDam		0			0				0			80			1				# change hydroDam efficiency later
+	# from Sepulveda & Jenkins (2018) "The role of firm low carbon electricity..."
+	techdata = [
+		#				investcost (high/mid/low)	variablecost	fixedcost	lifetime	efficiency	rampingrate
+		#				$/kW						$/MWh elec		$/kW/year	years					share of capacity per hour
+		:gasGT			880  880  780				1				14.25		30			0.43		1
+		:gasCCGT		1000 1000 920				1				19.4		30			0.58		0.3
+		:coal			1700 1700 1700				0				80			35			0.4			0.15
+		:bioGT			890  890  790				0.7				50			30			0.4			1
+		:bioCCGT		760							0.8				50			30			0.7			0.3
+		:nuclear		5100						0				160			60			0.4			0.05
+		:wind			1400						0				44			25			1			1
+		:offwind		2000						0				100			25			1			1
+		:transmission	NaN							0				NaN			50			NaN			1
+		:battery		1200						0				0			10			0.85		1	# 8h discharge time, 1200 €/kW = 150 €/kWh
+		:pv				600							0				19			25			1			1
+		:csp			1200						0				50			30			1			1	# add CSP data later
+		:hydro			10							0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 
 	]
-	investtechs = investdata[:,1]
-	investdata = Float64.(investdata[:,2:end])
-	baseinvestcost = AxisArray(investdata[:,1], investtechs)	# €/kW
-	variablecost = AxisArray(investdata[:,2], investtechs)	# €/MWh elec
-	fixedcost = AxisArray(investdata[:,3], investtechs)		# €/kW/year
-	lifetime = AxisArray(investdata[:,4], investtechs)		# years
-	efficiency = AxisArray(investdata[:,5], investtechs)
-	rampingrate = AxisArray(investdata[:,6], investtechs)
+	USDtoEUR = 1/1.2											# assume 1 EUR = 1.2 USD 
+	techs = techdata[:,1]
+	techdata = Float64.(techdata[:,2:end])
+	baseinvestcost = AxisArray(techdata[:,1]*USDtoEUR, techs)	# €/kW
+	variablecost = AxisArray(techdata[:,2]*USDtoEUR, techs)		# €/MWh elec
+	fixedcost = AxisArray(techdata[:,3]*USDtoEUR, techs)		# €/kW/year
+	lifetime = AxisArray(techdata[:,4], techs)					# years
+	efficiency = AxisArray(techdata[:,5], techs)
+	rampingrate = AxisArray(techdata[:,6], techs)
 	# rampingrate[:] .= 1										# disable all ramping constraints
 
 	fuelcost = AxisArray(Float64[0, 8, 30, 60, 8], [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
 
-	crf = AxisArray(discountrate ./ (1 .- 1 ./(1+discountrate).^lifetime), investtechs)
+	crf = AxisArray(discountrate ./ (1 .- 1 ./(1+discountrate).^lifetime), techs)
 
 	emissionsCO2 = AxisArray(zeros(length(FUEL)), FUEL)
 	emissionsCO2[[:coal,:gas]] = [0.330, 0.202]		# kgCO2/kWh fuel (or ton/MWh or kton/GWh)
@@ -241,8 +240,8 @@ function makeparameters(sets, hourinfo)
 	capacitylimits[:,:pv,6:10] = solarvars["capacity_pvplantB"]
 	capacitylimits[:,:csp,6:10] = solarvars["capacity_cspplantB"]
 
-	investcost = AxisArray(zeros(length(investtechs),length(allclasses)), investtechs, allclasses)	# €/kW
-	for k in investtechs, c in CLASS[k]
+	investcost = AxisArray(zeros(length(techs),length(allclasses)), techs, allclasses)	# €/kW
+	for k in techs, c in CLASS[k]
 		investcost[k,c] = baseinvestcost[k]
 	end
 	for k in [:wind,:pv,:csp]
