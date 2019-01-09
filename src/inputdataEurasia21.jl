@@ -140,7 +140,7 @@ function makeparameters(sets, hourinfo)
 	]
 	dischargetime[1:8,:hydro,:x0] = hydrostoragecapacity[2,:]./hydrocapacity[1:8,:x0] * 1000
 	dischargetime[[:GER,:UK,:BAL],:hydro,:x0] .= 300
-	dischargetime[9:14,:hydro,:x0] .= 168*6		# assume average discharge time 6 weeks for existing hydro in China
+	dischargetime[9:21,:hydro,:x0] .= 168*6		# assume average discharge time 6 weeks for existing hydro in Asia & China
 	dischargetime[:,:hydro,2:end-1] = reshape(hydrovars["potentialmeandischargetime"], numregions, nhydro-1)
 	dischargetime[:,:battery,:_] .= 8
 	dischargetime[isnan.(dischargetime)] = fill(10000, sum(isnan.(dischargetime)))
@@ -161,11 +161,13 @@ function makeparameters(sets, hourinfo)
 	connected = distancevars["connected"]
 	connectedoffshore = distancevars["connectedoffshore"]
 
-	connected[3,12] = connected[12,3] = true
+	connected[3,19] = connected[19,3] = true
 
 	# from Bogdanov & Breyer (2016) "North-East Asian Super Grid...",  fixed costs neglected for now
 	transmissioncostdata = connected .* (180 .+ 0.612*distances) .+ connectedoffshore .* (180 .+ 0.992*distances)
-	transmissioncost = AxisArray(transmissioncostdata, REGION, REGION)		# €/kW
+	transmissionfixedcostdata = connected .* (1.8 .+ 0.0075*distances) .+ connectedoffshore .* (1.8 .+ 0.0010*distances)
+	transmissioninvestcost = AxisArray(transmissioncostdata, REGION, REGION)		# €/kW
+	transmissionfixedcost = AxisArray(transmissionfixedcostdata, REGION, REGION)		# €/kW
 	transmissionlossdata = (connected .| connectedoffshore) .* (0.014 .+ 0.016*distances/1000)
 	transmissionlosses = AxisArray(transmissionlossdata, REGION, REGION)
 	smalltransmissionpenalty = 0.1		# €/MWh elec
@@ -181,7 +183,7 @@ function makeparameters(sets, hourinfo)
 		:nuclear		5100		0				160			60			0.4			0.05
 		:wind			1400		0				44			25			1			1
 		:offwind		2000		0				100			25			1			1
-		:transmission	NaN			0				0			50			NaN			1
+		:transmission	NaN			0				NaN			50			NaN			1
 		:battery		1200		0				0			10			0.85		1	# 8h discharge time, 1200 €/kW = 150 €/kWh
 		:pv				600			0				19			25			1			1
 		:csp			1200		0				50			30			1			1	# add CSP data later
@@ -257,6 +259,6 @@ function makeparameters(sets, hourinfo)
 	# end
 
 	return Params(cf, transmissionlosses, demand, hydrocapacity, cfhydroinflow, capacitylimits,
-		efficiency, rampingrate, dischargetime, initialhydrostoragelevel, minflow_existinghydro, emissionsCO2,
-		fuelcost, variablecost, smalltransmissionpenalty, investcost, crf, fixedcost, transmissioncost, hydroeleccost)
+		efficiency, rampingrate, dischargetime, initialhydrostoragelevel, minflow_existinghydro, emissionsCO2, fuelcost,
+		variablecost, smalltransmissionpenalty, investcost, crf, fixedcost, transmissioninvestcost, transmissionfixedcost, hydroeleccost)
 end

@@ -62,7 +62,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 	@unpack REGION, FUEL, TECH, CLASS, STORAGECLASS, HOUR, techtype, techfuel, reservoirclass = sets
 	@unpack cf, transmissionlosses, demand, cfhydroinflow, efficiency, rampingrate, dischargetime, initialhydrostoragelevel,
 			minflow_existinghydro, emissionsCO2, fuelcost, variablecost, smalltransmissionpenalty, investcost, crf, fixedcost,
-			transmissioncost, hydroeleccost = params
+			transmissioninvestcost, transmissionfixedcost, hydroeleccost = params
 	@unpack Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, TransmissionCapacity, Capacity = vars
 	@unpack hoursperperiod = hourinfo
 	@unpack carbontax, rampingconstraints = options
@@ -108,7 +108,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 		TwoWayStreet[r1 in REGION, r2 in REGION],
 			TransmissionCapacity[r1,r2] == TransmissionCapacity[r2,r1] 
 
-		NoTransmission[r1 in REGION, r2 in REGION; transmissioncost[r1,r2] == 0],
+		NoTransmission[r1 in REGION, r2 in REGION; transmissioninvestcost[r1,r2] == 0],
 			TransmissionCapacity[r1,r2] == 0
 
 		Calculate_FuelUse[r in REGION, f in FUEL; f != :_],
@@ -128,7 +128,8 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 				+ 0.001 * sum(Electricity[r,:hydro,c,h] * hydroeleccost[r,c] for c in CLASS[:hydro], h in HOUR) +
 				+ 0.001 * sum(Transmission[r,r2,h] * smalltransmissionpenalty for r2 in REGION, h in HOUR) +
 				+ sum(Capacity[r,k,c] * (investcost[k,c] * crf[k] + fixedcost[k]) for k in TECH, c in CLASS[k]) +
-				+ 0.5 * sum(TransmissionCapacity[r,r2] * transmissioncost[r,r2] * crf[:transmission] for r2 in REGION)
+				+ 0.5 * sum(TransmissionCapacity[r,r2] *
+							(transmissioninvestcost[r,r2] * crf[:transmission] + transmissionfixedcost[r,r2]) for r2 in REGION)
 		# =#
 	end	#constraints
 
