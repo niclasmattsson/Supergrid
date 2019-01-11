@@ -38,10 +38,10 @@ end
 
 function setcapacitybounds(sets, params, Capacity)
 	@unpack REGION, CLASS = sets
-	@unpack capacitylimits, hydrocapacity = params
+	@unpack classlimits, hydrocapacity = params
 	for r in REGION, k in [:wind, :offwind, :pv, :csp]
 		for c in CLASS[k]
-			setupperbound(Capacity[r,k,c], capacitylimits[r,k,c])
+			setupperbound(Capacity[r,k,c], classlimits[r,k,c])
 		end
 	end
 	for r in REGION

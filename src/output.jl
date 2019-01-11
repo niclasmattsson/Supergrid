@@ -4,7 +4,7 @@ sumdimdrop(x::AbstractArray; dims) = dropdims(sum(x, dims=dims), dims=dims)
 
 function showresults(model::ModelInfo)
 	@unpack REGION, FUEL, TECH, CLASS, HOUR, techtype = model.sets
-	@unpack demand, capacitylimits, hydrocapacity = model.params
+	@unpack demand, classlimits, hydrocapacity = model.params
 	@unpack CO2emissions, FuelUse, Electricity, Transmission, Capacity, TransmissionCapacity, Charging, StorageLevel, Systemcost = model.vars
 	@unpack ElecDemand = model.constraints
 	hoursperperiod = model.hourinfo.hoursperperiod
@@ -80,7 +80,7 @@ function showresults(model::ModelInfo)
 		for (i,k) in enumerate([:wind, :offwind, :pv, :hydro])
 			colors = [palette[findfirst(displaytechs .== k)]; RGB(0.9,0.9,0.9)]
 			used = [sum(getvalue(Capacity[r,k,c]) for r in REGION[regs]) for c in CLASS[k]]
-			lims = [sum(k == :hydro ? hydrocapacity[r,c] : capacitylimits[r,k,c] for r in REGION[regs]) for c in CLASS[k]]
+			lims = [sum(k == :hydro ? hydrocapacity[r,c] : classlimits[r,k,c] for r in REGION[regs]) for c in CLASS[k]]
 			groupedbar!(String.(CLASS[k]), [used lims-used], subplot=i, bar_position = :stack, line=0, color_palette=colors)
 		end
 		display(composite)

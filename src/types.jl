@@ -17,7 +17,7 @@ struct Params
 	demand						::AxisArray{Float64,2}	
 	hydrocapacity				::AxisArray{Float64,2}	
 	cfhydroinflow				::AxisArray{Float64,3}
-	capacitylimits				::AxisArray{Float64,3}	
+	classlimits					::AxisArray{Float64,3}	
 	efficiency					::AxisArray{Float64,1}
 	rampingrate					::AxisArray{Float64,1}
 	dischargetime				::AxisArray{Float64,3}

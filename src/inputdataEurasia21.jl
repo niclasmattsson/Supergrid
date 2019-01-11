@@ -226,7 +226,7 @@ function makeparameters(sets, hourinfo)
 
 	allclasses = union(sets.CLASS[:pv], sets.CLASS[:hydro], [:_])
 	cf = AxisArray(ones(numregions,length(TECH),length(allclasses),nhours), REGION, TECH, allclasses, HOUR)
-	capacitylimits = AxisArray(zeros(numregions,4,length(CLASS[:pv])), REGION, [:wind, :offwind, :pv, :csp], CLASS[:pv])
+	classlimits = AxisArray(zeros(numregions,4,length(CLASS[:pv])), REGION, [:wind, :offwind, :pv, :csp], CLASS[:pv])
 
 	# sync wind & solar time series with demand
 	# (ignore 2016 extra leap day for now, fix this later)
@@ -242,13 +242,13 @@ function makeparameters(sets, hourinfo)
 	cf[isnan.(cf)] = zeros(sum(isnan.(cf)))
 	cf[cf .< 0.01] = zeros(sum(cf .< 0.01))		# set small values to 0 for better numerical stability
 
-	capacitylimits[:,:wind,1:5] = windvars["capacity_onshoreA"]
-	capacitylimits[:,:offwind,1:5] = windvars["capacity_offshore"]
-	capacitylimits[:,:pv,1:5] = solarvars["capacity_pvplantA"]
-	capacitylimits[:,:csp,1:5] = solarvars["capacity_cspplantA"]
-	capacitylimits[:,:wind,6:10] = windvars["capacity_onshoreB"]
-	capacitylimits[:,:pv,6:10] = solarvars["capacity_pvplantB"]
-	capacitylimits[:,:csp,6:10] = solarvars["capacity_cspplantB"]
+	classlimits[:,:wind,1:5] = windvars["capacity_onshoreA"]
+	classlimits[:,:offwind,1:5] = windvars["capacity_offshore"]
+	classlimits[:,:pv,1:5] = solarvars["capacity_pvplantA"]
+	classlimits[:,:csp,1:5] = solarvars["capacity_cspplantA"]
+	classlimits[:,:wind,6:10] = windvars["capacity_onshoreB"]
+	classlimits[:,:pv,6:10] = solarvars["capacity_pvplantB"]
+	classlimits[:,:csp,6:10] = solarvars["capacity_cspplantB"]
 
 	investcost = AxisArray(zeros(length(techs),length(allclasses)), techs, allclasses)	# €/kW
 	for k in techs, c in CLASS[k]
@@ -267,7 +267,7 @@ function makeparameters(sets, hourinfo)
 	# 	display(plot(qq./maximum(qq,dims=1), size=(1850,950)))
 	# end
 
-	return Params(cf, transmissionlosses, demand, hydrocapacity, cfhydroinflow, capacitylimits,
+	return Params(cf, transmissionlosses, demand, hydrocapacity, cfhydroinflow, classlimits,
 		efficiency, rampingrate, dischargetime, initialhydrostoragelevel, minflow_existinghydro, emissionsCO2, fuelcost,
 		variablecost, smalltransmissionpenalty, investcost, crf, fixedcost, transmissioninvestcost, transmissionfixedcost, hydroeleccost)
 end
