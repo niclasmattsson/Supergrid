@@ -198,20 +198,21 @@ function makeparameters(sets, hourinfo)
 	lifetime = AxisArray(techdata[:,4], techs)			# years
 	efficiency = AxisArray(techdata[:,5], techs)
 	rampingrate = AxisArray(techdata[:,6], techs)
-	# rampingrate[:] .= 1								# disable all ramping constraints
 
 	# fuel cost references:
 	# 1. https://www.gov.uk/government/statistical-data-sets/prices-of-fuels-purchased-by-major-power-producers
 	# 2. https://oilprice.com/Energy/Natural-Gas/European-Natural-Gas-Prices-Are-Set-To-Rise-Further.html
 	# 3. https://www.bloomberg.com/news/articles/2018-09-03/coal-nears-100-in-europe-as-china-s-power-demand-draws-in-fuel
 	# 4. https://www.frisch.uio.no/ressurser/LIBEMOD/pdf/phase_out_28mai2015_golombek_powerpoint.pdf
+	# 5. http://www.world-nuclear.org/information-library/economic-aspects/economics-of-nuclear-power.aspx
+	# 6. https://www.gasforclimate2050.eu/files/files/Ecofys_Gas_for_Climate_Report_Study_March18.pdf  (page 19, section 3.4, figure 7)
 	# Sepulveda/Jenkins:  gas & biogas 21 €/MWh, uranium 3 €/MWh
 	# 1: coal 11-12 €/MWh, gas 19-21 €/MWh,  2: gas 20-30 €/MWh,  3: coal 70-90 €/ton = (25 MJ/kg) = 2.8-3.6 €/GJ = 10-13 €/MWh
 	# 4: gas 45*.5 = 22 €/MWh, coal 22.3*.4 = 9 €/MWh, bio 26.4*.4 = 11 €/MWh, nuclear 6.7*.35 = 2.3 €/MWh
+	# 5: nuclear fuel pellets 0.39 USD/kWh = 3.2 €/MWh    (see also Stuff/Nuclear fuel costs.xlsx)
+	# 6: biomethane anaerobic digestion 96 €/MWh (2015), 60 €/MWh (2050), thermal gasification 37 €/MWh (2050)
 	
-	# original assumptions:  [0, 8, 30, 60, 8] for [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
-	fuelcost = AxisArray(Float64[0, 12, 22, 30, 3], [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
-	# OK for now, but need to find references for biogas cost
+	fuelcost = AxisArray(Float64[0, 12, 22, 37, 3.2], [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
 
 	crf = AxisArray(discountrate ./ (1 .- 1 ./(1+discountrate).^lifetime), techs)
 

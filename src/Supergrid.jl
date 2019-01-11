@@ -16,7 +16,9 @@ include("jumpmodel.jl")
 include("output.jl")
 
 defaultoptions() = Dict(
-		:carbontax => 0.0,
+		:carbontax => 0.0,						# €/ton CO2
+		:maxbiocapacity => 0.05,				# share of peak demand
+		:nuclearallowed => true,
 		:sampleinterval => 3,
 		:selectdays => 1,
 		:skipdays => 0,
@@ -40,7 +42,7 @@ function buildmodel(; optionlist...)
 	print("  - variables:   ")
 	@time vars = makevariables(modelname, sets)
 	print("  - extra bounds:")
-	@time setcapacitybounds(sets, params, vars)
+	@time setcapacitybounds(sets, params, vars, options)
 	print("  - constraints: ")
 	@time constraints = makeconstraints(modelname, sets, params, vars, hourinfo, options)
 	print("  - objective:   ")

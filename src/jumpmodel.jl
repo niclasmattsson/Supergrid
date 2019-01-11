@@ -36,9 +36,10 @@ function makevariables(m, sets)
 	return Vars(Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, TransmissionCapacity, Capacity)
 end
 
-function setcapacitybounds(sets, params, Capacity)
+function setcapacitybounds(sets, params, Capacity, options)
 	@unpack REGION, CLASS = sets
 	@unpack classlimits, hydrocapacity = params
+	@unpack nuclearallowed = options
 	for r in REGION, k in [:wind, :offwind, :pv, :csp]
 		for c in CLASS[k]
 			setupperbound(Capacity[r,k,c], classlimits[r,k,c])
@@ -51,11 +52,16 @@ function setcapacitybounds(sets, params, Capacity)
 			# setupperbound(Capacity[r,:hydro,c], hydrocapacity[r,c])
 		end
 	end
+	if !nuclearallowed
+		for r in REGION
+			setupperbound(Capacity[r,:nuclear,:_], 0.0)
+		end
+	end
 end
 
-function setcapacitybounds(sets, params, vars::Vars)
+function setcapacitybounds(sets, params, vars::Vars, options)
 	@unpack Capacity = vars
-	setcapacitybounds(sets, params, Capacity)
+	setcapacitybounds(sets, params, Capacity, options)
 end
 
 function makeconstraints(m, sets, params, vars, hourinfo, options)
@@ -65,7 +71,9 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 			transmissioninvestcost, transmissionfixedcost, hydroeleccost = params
 	@unpack Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, TransmissionCapacity, Capacity = vars
 	@unpack hoursperperiod = hourinfo
-	@unpack carbontax, rampingconstraints = options
+	@unpack carbontax, rampingconstraints, maxbiocapacity = options
+
+	maxdemand = dropdims(maximum(demand, dims=2), dims=2)
 
 	@constraints m begin
 		ElecCapacity[r in REGION, k in TECH, c in CLASS[k], h in HOUR],
@@ -98,6 +106,9 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 		# We'll add pumped hydro later
 		NoHydroCharging[r in REGION, h in HOUR],
 			Charging[r,:hydro,h] == 0
+
+		BioLimit[r in REGION],
+			Capacity[r,:bioGT,:_] + Capacity[r,:bioCCGT,:_] <= maxbiocapacity * maxdemand[r]
 
 		ChargingNeedsBattery[r in REGION, h in HOUR],
 			Charging[r,:battery,h] <= Capacity[r,:battery, :_]
