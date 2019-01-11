@@ -16,8 +16,9 @@ include("jumpmodel.jl")
 include("output.jl")
 
 defaultoptions() = Dict(
-		:carbontax => 0.0,						# €/ton CO2
-		:maxbiocapacity => 0.05,				# share of peak demand
+		:carbontax => 0.0,				# €/ton CO2
+		:carboncap => 1.0,				# global cap in kg CO2/kWh elec  (BAU scenario: ~0.5 kgCO2/kWh elec)
+		:maxbiocapacity => 0.05,		# share of peak demand
 		:nuclearallowed => true,
 		:sampleinterval => 3,
 		:selectdays => 1,

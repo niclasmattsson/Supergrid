@@ -178,7 +178,7 @@ function makeparameters(sets, hourinfo)
 		#				€/kW		€/MWh elec		€/kW/year	years					share of capacity per hour
 		:gasGT			500			1				10			30			0.4			1
 		:gasCCGT		800			1				16			30			0.6			0.3
-		:coal			1600		3				48			30			0.4			0.15
+		:coal			1600		2				48			30			0.45		0.15
 		:bioGT			500			1				10			30			0.4			1
 		:bioCCGT		800			1				16			30			0.6			0.3
 		:nuclear		5000		3				150			50			0.4			0.05
@@ -212,7 +212,7 @@ function makeparameters(sets, hourinfo)
 	# 5: nuclear fuel pellets 0.39 USD/kWh = 3.2 €/MWh    (see also Stuff/Nuclear fuel costs.xlsx)
 	# 6: biomethane anaerobic digestion 96 €/MWh (2015), 60 €/MWh (2050), thermal gasification 37 €/MWh (2050)
 	
-	fuelcost = AxisArray(Float64[0, 12, 22, 37, 3.2], [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
+	fuelcost = AxisArray(Float64[0, 11, 22, 37, 3.2], [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
 
 	crf = AxisArray(discountrate ./ (1 .- 1 ./(1+discountrate).^lifetime), techs)
 

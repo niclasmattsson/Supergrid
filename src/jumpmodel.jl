@@ -71,7 +71,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 			transmissioninvestcost, transmissionfixedcost, hydroeleccost = params
 	@unpack Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, TransmissionCapacity, Capacity = vars
 	@unpack hoursperperiod = hourinfo
-	@unpack carbontax, rampingconstraints, maxbiocapacity = options
+	@unpack carbontax, carboncap, rampingconstraints, maxbiocapacity = options
 
 	maxdemand = dropdims(maximum(demand, dims=2), dims=2)
 
@@ -127,6 +127,9 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 
 		TotalCO2[r in REGION],
 			CO2emissions[r] == sum(FuelUse[r,f] * emissionsCO2[f] for f in FUEL)
+
+		GlobalCO2Cap,
+			sum(CO2emissions[r] for r in REGION) <= carboncap * sum(demand) * hoursperperiod
 
 		# Storage costs included in ordinary Capacity costs
 		# Transmission costs halved since they are counted twice (allocate half the cost to sending and receiving regions)
