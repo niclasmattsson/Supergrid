@@ -36,10 +36,11 @@ function makevariables(m, sets)
 	return Vars(Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, TransmissionCapacity, Capacity)
 end
 
-function setcapacitybounds(sets, params, Capacity, options)
+function setbounds(sets, params, vars, options)
 	@unpack REGION, CLASS = sets
-	@unpack classlimits, hydrocapacity = params
-	@unpack nuclearallowed = options
+	@unpack Capacity, TransmissionCapacity = vars
+	@unpack classlimits, hydrocapacity, transmissionislands = params
+	@unpack nuclearallowed, transmissionallowed = options
 	for r in REGION, k in [:wind, :offwind, :pv, :csp]
 		for c in CLASS[k]
 			setupperbound(Capacity[r,k,c], classlimits[r,k,c])
@@ -57,11 +58,11 @@ function setcapacitybounds(sets, params, Capacity, options)
 			setupperbound(Capacity[r,:nuclear,:_], 0.0)
 		end
 	end
-end
-
-function setcapacitybounds(sets, params, vars::Vars, options)
-	@unpack Capacity = vars
-	setcapacitybounds(sets, params, Capacity, options)
+	for r1 in REGION, r2 in REGION
+		if transmissionallowed == :none || (transmissionallowed == :islands && !transmissionislands[r1,r2])
+			setupperbound(TransmissionCapacity[r1,r2], 0.0)
+		end
+	end
 end
 
 function makeconstraints(m, sets, params, vars, hourinfo, options)

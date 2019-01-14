@@ -20,6 +20,7 @@ defaultoptions() = Dict(
 		:carboncap => 1.0,				# global cap in kg CO2/kWh elec  (BAU scenario: ~0.5 kgCO2/kWh elec)
 		:maxbiocapacity => 0.05,		# share of peak demand
 		:nuclearallowed => true,
+		:transmissionallowed => :all,			# :none, :islands, :all
 		:sampleinterval => 3,
 		:selectdays => 1,
 		:skipdays => 0,
@@ -43,7 +44,7 @@ function buildmodel(; optionlist...)
 	print("  - variables:   ")
 	@time vars = makevariables(modelname, sets)
 	print("  - extra bounds:")
-	@time setcapacitybounds(sets, params, vars, options)
+	@time setbounds(sets, params, vars, options)
 	print("  - constraints: ")
 	@time constraints = makeconstraints(modelname, sets, params, vars, hourinfo, options)
 	print("  - objective:   ")
@@ -61,9 +62,15 @@ function runmodel(; optionlist...)		# carbon tax in €/ton CO2
 
 	println("\nSolving model...")
 	#writeMPS(model, "model3.mps")
-	status = solve(model.modelname)
 
-	annualelec, capac, tcapac, chart = showresults(model)
+	status = solve(model.modelname)
+	println("\nSolve status: $status")
+
+	if status == :Optimal
+		annualelec, capac, tcapac, chart = showresults(model)
+	else
+		annualelec, capac, tcapac, chart = nothing, nothing, nothing, nothing
+	end
 
 	return model, annualelec, capac, tcapac, chart
 end

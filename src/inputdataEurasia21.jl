@@ -172,6 +172,12 @@ function makeparameters(sets, hourinfo)
 	transmissionlosses = AxisArray(transmissionlossdata, REGION, REGION)
 	smalltransmissionpenalty = 0.1		# €/MWh elec
 
+	transmissionislands = AxisArray(zeros(Bool, numregions,numregions), REGION, REGION)
+	islandindexes = [1:8, 9:15, 16:21]
+	for ndx in islandindexes
+		transmissionislands[ndx,ndx] .= true
+	end
+
 	# PV and battery costs have high/mid/low costs:  high = 1.5*mid, low = 0.5*mid
 	techdata = [
 		#				investcost 	variablecost	fixedcost	lifetime	efficiency	rampingrate
@@ -268,7 +274,7 @@ function makeparameters(sets, hourinfo)
 	# 	display(plot(qq./maximum(qq,dims=1), size=(1850,950)))
 	# end
 
-	return Params(cf, transmissionlosses, demand, hydrocapacity, cfhydroinflow, classlimits,
+	return Params(cf, transmissionlosses, demand, hydrocapacity, cfhydroinflow, classlimits, transmissionislands,
 		efficiency, rampingrate, dischargetime, initialhydrostoragelevel, minflow_existinghydro, emissionsCO2, fuelcost,
 		variablecost, smalltransmissionpenalty, investcost, crf, fixedcost, transmissioninvestcost, transmissionfixedcost, hydroeleccost)
 end
