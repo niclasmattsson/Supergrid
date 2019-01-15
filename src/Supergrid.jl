@@ -14,6 +14,7 @@ include("inputdataEurasia21.jl")
 # include("inputdataMENA.jl")
 include("jumpmodel.jl")
 include("output.jl")
+include("iewruns.jl")
 
 defaultoptions() = Dict(
 		:carbontax => 0.0,				# €/ton CO2
@@ -34,11 +35,20 @@ defaultoptions() = Dict(
 buildmodel(tax, interval; optionlist...) = buildmodel(; carbontax=float(tax), sampleinterval=interval, optionlist...)
 
 function buildmodel(; optionlist...)
+	options, hourinfo, sets, params = buildsetsparams(; optionlist...)
+	return buildvarsmodel(options, hourinfo, sets, params)
+end
+
+function buildsetsparams(; optionlist...)
 	println("\nReading input data...")
 	options = merge(defaultoptions(), optionlist)
 	hourinfo = HourSampling(options)
 	@time sets = makesets(hourinfo)
 	@time params = makeparameters(sets, hourinfo)
+	return options, hourinfo, sets, params
+end
+
+function buildvarsmodel(options, hourinfo, sets, params)
 	println("\nBuilding model...")
 	modelname = initjumpmodel(options)
 	print("  - variables:   ")
@@ -50,7 +60,7 @@ function buildmodel(; optionlist...)
 	print("  - objective:   ")
 	@time makeobjective(modelname, sets, vars)
 
-	return ModelInfo(modelname, sets, params, vars, constraints, hourinfo)
+	return ModelInfo(modelname, sets, params, vars, constraints, hourinfo)	
 end
 
 runmodel(tax, interval; optionlist...) = runmodel(; carbontax=float(tax), sampleinterval=interval, optionlist...)
