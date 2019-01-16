@@ -5,6 +5,7 @@ function initjumpmodel(options)
 	# https://www.ibm.com/support/knowledgecenter/SSSA5P_12.8.0/ilog.odms.cplex.help/CPLEX/Parameters/topics/introListAlpha.html
 	# https://www.ibm.com/support/knowledgecenter/SSSA5P_12.8.0/ilog.odms.cplex.help/CPLEX/UsrMan/topics/cont_optim/barrier/19_tuning_title_synopsis.html
 		m = Model(solver=CplexSolver(CPXPARAM_LPMethod=4, CPXPARAM_Threads=threads, CPXPARAM_Read_Scale=1, CPXPARAM_Preprocessing_Dual=-1,
+					CPXPARAM_Simplex_Tolerances_Markowitz=0.999,
 					CPXPARAM_Barrier_Crossover=-1, CPXPARAM_Emphasis_Numerical=1, CPXPARAM_ScreenOutput=Int(showsolverlog)))
 					# CPXPARAM_Simplex_Tolerances_Feasibility=1e-9, CPXPARAM_Simplex_Tolerances_Optimality=1e-9
 					# no crossover: CPXPARAM_Barrier_Crossover=-1, dual crossover: CPXPARAM_Barrier_Crossover=2
@@ -42,7 +43,7 @@ function setbounds(sets, params, vars, options)
 	@unpack classlimits, hydrocapacity, transmissionislands = params
 	@unpack nuclearallowed, transmissionallowed = options
 	for r in REGION, k in TECH
-		if techtype[k] == :vre
+		if techtype[k] == :vre || k == :csp
 			for c in CLASS[k]
 				setupperbound(Capacity[r,k,c], classlimits[r,k,c])
 			end
@@ -69,7 +70,7 @@ end
 
 function makeconstraints(m, sets, params, vars, hourinfo, options)
 	@unpack REGION, FUEL, TECH, CLASS, STORAGECLASS, HOUR, techtype, techfuel, reservoirclass = sets
-	@unpack cf, transmissionlosses, demand, cfhydroinflow, efficiency, rampingrate, dischargetime, initialhydrostoragelevel,
+	@unpack cf, transmissionlosses, demand, cfhydroinflow, efficiency, rampingrate, dischargetime, initialstoragelevel,
 			minflow_existinghydro, emissionsCO2, fuelcost, variablecost, smalltransmissionpenalty, investcost, crf, fixedcost,
 			transmissioninvestcost, transmissionfixedcost, hydroeleccost = params
 	@unpack Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, TransmissionCapacity, Capacity = vars
@@ -80,7 +81,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 
 	@constraints m begin
 		ElecCapacity[r in REGION, k in TECH, c in CLASS[k], h in HOUR],
-			Electricity[r,k,c,h] <= Capacity[r,k,c] * cf[r,k,c,h] * hoursperperiod
+			Electricity[r,k,c,h] <= Capacity[r,k,c] * (k == :csp ? 1 : cf[r,k,c,h]) * hoursperperiod
 
 		ElecDemand[r in REGION, h in HOUR],
 			sum(Electricity[r,k,c,h] for k in TECH, c in CLASS[k]) - sum(Charging[r,k,h] for k in TECH if techtype[k] == :storage) +
@@ -90,25 +91,27 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 		# <= instead of == to avoid need of slack variable to deal with spillage during spring floods, etc
 		StorageBalance[r in REGION, k in TECH, sc in STORAGECLASS[k], h in HOUR; techtype[k] == :storage],
 			StorageLevel[r,k,sc,h] <= StorageLevel[r,k,sc, (h>1) ? h-1 : length(HOUR)] +		# unit: energy diff per period (TWh/period)
-					0.001 * Charging[r,k,h] +
-					+ (k != :hydro ? 0.0 :
-							0.001 * hoursperperiod * sum(cfhydroinflow[r,c,h] * Capacity[r,:hydro,c] for c in reservoirclass[sc])) +
-					- 0.001 * sum(Electricity[r,k,c,h]/efficiency[k] for c in reservoirclass[sc])
+				0.001 * Charging[r,k,h] +
+				+ (k == :hydro ? 0.001 * hoursperperiod * sum(cfhydroinflow[r,c,h] * Capacity[r,:hydro,c] for c in reservoirclass[sc])
+								: 0.0) +
+				+ (k == :csp ? 0.001 * hoursperperiod * sum(cf[r,:csp,c,h] * Capacity[r,:csp,c] for c in reservoirclass[sc])
+								: 0.0) +
+				- 0.001 * sum(Electricity[r,k,c,h]/efficiency[k] for c in reservoirclass[sc])
 
 		MaxStorageCapacity[r in REGION, k in TECH, sc in STORAGECLASS[k], h in HOUR; techtype[k] == :storage],
 			StorageLevel[r,k,sc,h] <= sum(Capacity[r,k,c] * dischargetime[r,k,c] for c in reservoirclass[sc]) / 1000
 
 		InitialStorageLevel[r in REGION, k in TECH, sc in STORAGECLASS[k]; techtype[k] == :storage],
 			StorageLevel[r,k,sc,1] ==
-				initialhydrostoragelevel * sum(Capacity[r,k,c] * dischargetime[r,k,c] for c in reservoirclass[sc]) / 1000
+				initialstoragelevel * sum(Capacity[r,k,c] * dischargetime[r,k,c] for c in reservoirclass[sc]) / 1000
 
 		# consider turbine efficiencies later
 		MinHydroFlow[r in REGION, h in HOUR],
 			Electricity[r,:hydro,:x0,h] >= minflow_existinghydro * hoursperperiod * cfhydroinflow[r,:x0,h] * Capacity[r,:hydro,:x0]
 
 		# We'll add pumped hydro later
-		NoHydroCharging[r in REGION, h in HOUR],
-			Charging[r,:hydro,h] == 0
+		NoCharging[r in REGION, h in HOUR, k in [:hydro, :csp]],
+			Charging[r,k,h] == 0
 
 		BioLimit[r in REGION],
 			Capacity[r,:bioGT,:_] + Capacity[r,:bioCCGT,:_] <= maxbiocapacity * maxdemand[r]
@@ -165,7 +168,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 	end
 
 	return Constraints(ElecCapacity, ElecDemand, RampingDown, RampingUp, StorageBalance, MaxStorageCapacity, InitialStorageLevel,
-				MaxTransmissionCapacity, TwoWayStreet, NoTransmission, NoHydroCharging, ChargingNeedsBattery, Calculate_FuelUse,
+				MaxTransmissionCapacity, TwoWayStreet, NoTransmission, NoCharging, ChargingNeedsBattery, Calculate_FuelUse,
 				TotalCO2, Totalcosts)
 end
 

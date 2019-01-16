@@ -6,7 +6,7 @@ function IEWruns(hourinterval)
 	results = Dict()
 	for nuc in [false, true]
 		for tm in [:none, :islands, :all]
-			for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0]
+			for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0]
 				println("\n\n\nNew run: nuclear=$nuc, transmission=$tm, cap=$cap.")
 				model = buildmodel(sampleinterval=hourinterval, carboncap=cap, maxbiocapacity=0.05, nuclearallowed=nuc, transmissionallowed=tm)
 				println("\nSolving model...")
@@ -22,11 +22,12 @@ end
 
 function IEWruns2(hourinterval)
 	results = Dict()
-	for nuc in [false, true]
+	for nuc in [false]
 		for tm in [:islands, :all]
-			for cap in [0.01]
+			for cap in [0.005]
 				options, hourinfo, sets, params = buildsetsparams(sampleinterval=hourinterval, carboncap=cap, maxbiocapacity=0.05, nuclearallowed=nuc, transmissionallowed=tm)
 				pvcost = params.investcost[:pv,:a1]
+				pvroofcost = params.investcost[:pvroof,:a1]
 				batterycost = params.investcost[:battery,:_]
 				for solar in [:high, :mid, :low]
 					for battery in [:high, :mid, :low]
@@ -34,10 +35,13 @@ function IEWruns2(hourinterval)
 						for c in sets.CLASS[:pv]
 							if solar == :high
 								params.investcost[:pv,c] = pvcost * 1.5
+								params.investcost[:pvroof,c] = pvroofcost + pvcost * 0.5
 							elseif solar == :mid
 								params.investcost[:pv,c] = pvcost
+								params.investcost[:pvroof,c] = pvroofcost
 							elseif solar == :low
 								params.investcost[:pv,c] = pvcost * 0.5
+								params.investcost[:pvroof,c] = pvroofcost - pvcost * 0.5
 							end
 						end
 						if battery == :high

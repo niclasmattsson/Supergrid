@@ -13,9 +13,9 @@ makesets(r::Symbol, hourinfo) = makesets([r], hourinfo)
 
 function makesets(REGION::Vector{Symbol}, hourinfo)
 	techdata = Dict(
-		:name => [:pv,  :pvroof, :csp, :wind, :offwind, :hydro,	  :coal,    :gasGT,   :gasCCGT, :bioGT,   :bioCCGT, :nuclear, :battery],
-		:type => [:vre, :vre,	 :vre, :vre,  :vre,     :storage,  :thermal, :thermal, :thermal, :thermal, :thermal, :thermal, :storage],
-		:fuel => [:_,   :_,      :_,   :_,    :_,       :_,        :coal,    :gas,     :gas,     :biogas,  :biogas,  :uranium, :_]
+		:name => [:pv,  :pvroof, :csp,     :wind, :offwind, :hydro,	   :coal,    :gasGT,   :gasCCGT, :bioGT,   :bioCCGT, :nuclear, :battery],
+		:type => [:vre, :vre,	 :storage, :vre,  :vre,     :storage,  :thermal, :thermal, :thermal, :thermal, :thermal, :thermal, :storage],
+		:fuel => [:_,   :_,      :_,       :_,    :_,       :_,        :coal,    :gas,     :gas,     :biogas,  :biogas,  :uranium, :_]
 	)
 	nstorageclasses = (4,4)		# (cost classes, reservoir classes)
 	nvreclasses = 5
@@ -30,13 +30,18 @@ function makesets(REGION::Vector{Symbol}, hourinfo)
 
 	TECH = techdata[:name]
 	FUEL = [:_, :coal, :gas, :biogas, :uranium]
-	CLASS = Dict(k => k == :hydro ? hydroclass : techtype[k] == :vre ? vreclass : noclass for k in TECH)
+	CLASS = Dict(k => k == :hydro ? hydroclass : techtype[k] == :vre || k == :csp ? vreclass : noclass for k in TECH)
 	CLASS[:transmission] = noclass
-	STORAGECLASS = Dict(k => k == :hydro ? [:x0;  Symbol.(reservoirs)] : [:_] for k in TECH)
+	STORAGECLASS = Dict(k => [:_] for k in TECH)
+	STORAGECLASS[:hydro] = [:x0;  Symbol.(reservoirs)]
+	STORAGECLASS[:csp] = vreclass
 
 	reservoirclass = Dict(r => [Symbol("$r$number") for number = 1:nstorageclasses[1]] for r in Symbol.(reservoirs))
 	reservoirclass[:x0] = [:x0]
 	reservoirclass[:_] = [:_]
+	for vc in vreclass
+		reservoirclass[vc] = [vc]
+	end
 
 	HOUR = 1:Int(length(hourinfo.hourindexes)/hourinfo.sampleinterval)		# later use hoursperyear() in helperfunctions
 
@@ -79,12 +84,14 @@ function makeparameters(sets, hourinfo)
 	hoursperperiod = Int(hourinfo.hoursperperiod)
 
 	discountrate = 0.05
-	initialhydrostoragelevel = 0.7		# make this tech dependent later
+	initialstoragelevel = 0.7		# make this tech dependent later
 	minflow_existinghydro = 0.4
+	cspsolarmultiple = 3.0			# peak capacity of collectors divided by turbine power
 
 	numregions = length(REGION)
 	nhours = length(HOUR)
 	nhydro = length(CLASS[:hydro])
+	nclasses = length(CLASS[:pv])
 
 	path = joinpath(dirname(@__FILE__), "..")
 
@@ -118,7 +125,7 @@ function makeparameters(sets, hourinfo)
 	hydroeleccost = AxisArray(zeros(numregions,nhydro), REGION, CLASS[:hydro])
 	monthlyinflow = AxisArray(zeros(numregions,nhydro,12), REGION, CLASS[:hydro], 1:12)
 	cfhydroinflow = AxisArray(zeros(numregions,nhydro,nhours), REGION, CLASS[:hydro], HOUR)
-	dischargetime = AxisArray(zeros(numregions,2,1+nhydro), REGION, [:hydro,:battery], [CLASS[:hydro]; :_])
+	dischargetime = AxisArray(zeros(numregions,3,1+nhydro+nclasses), REGION, [:hydro,:battery,:csp], [CLASS[:hydro]; CLASS[:csp]; :_])
 	
 	hydrocapacity[:,:x0] = hydrovars["existingcapac"]
 	hydrocapacity[:,2:end] = reshape(hydrovars["potentialcapac"], numregions, nhydro-1)
@@ -141,8 +148,10 @@ function makeparameters(sets, hourinfo)
 	dischargetime[1:8,:hydro,:x0] = hydrostoragecapacity[2,:]./hydrocapacity[1:8,:x0] * 1000
 	dischargetime[[:GER,:UK,:BAL],:hydro,:x0] .= 300
 	dischargetime[9:21,:hydro,:x0] .= 168*6		# assume average discharge time 6 weeks for existing hydro in Asia & China
-	dischargetime[:,:hydro,2:end-1] = reshape(hydrovars["potentialmeandischargetime"], numregions, nhydro-1)
+	dischargetime[:,:hydro,2:end-1-nclasses] = reshape(hydrovars["potentialmeandischargetime"], numregions, nhydro-1)
+
 	dischargetime[:,:battery,:_] .= 8
+	dischargetime[:,:csp,:] .= 9
 	dischargetime[isnan.(dischargetime)] = fill(10000, sum(isnan.(dischargetime)))
 	dischargetime[dischargetime .> 10000] = fill(10000, sum(dischargetime .> 10000))
 
@@ -194,7 +203,7 @@ function makeparameters(sets, hourinfo)
 		:battery		1200		0				12			10			0.9			1	# 8h discharge time, 1200 €/kW = 150 €/kWh
 		:pv				800			0				16			25			1			1
 		:pvroof			1200		0				24			25			1			1
-		:csp			1200		0				36			30			1			1	# add CSP data later
+		:csp			4000		0				36			30			1			1	# adjust investcost for solar multiple below
 		:hydro			10			0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 
 	]
 	techs = techdata[:,1]
@@ -268,6 +277,13 @@ function makeparameters(sets, hourinfo)
 		investcost[k,6:10] .= baseinvestcost[k]*1.1
 	end
 
+	# adjust CSP parameters for solar multiple, convert solar capacity to electrical power
+	# collectors about 40% of total cost (IRENA 2012), scale up the collector component of the cost
+	investcost[:csp,:] = investcost[:csp,:] * (0.6 + 0.4*cspsolarmultiple)		# base data is per kW electrical for solar multiple 1 
+	cf[:,:csp,:,:] = cf[:,:csp,:,:] * cspsolarmultiple							# OK if this surpasses 100%
+	classlimits[:,:csp,:] = classlimits[:,:csp,:] / cspsolarmultiple			# GIS data calculated as peak solar power
+	# The Capacity variable of the model should now be correct (turbine capacity, with a larger solar collector field)
+
 	# # check demand/solar synchronization
 	# plotly()
 	# for r = 1:numregions
@@ -278,6 +294,6 @@ function makeparameters(sets, hourinfo)
 	# end
 
 	return Params(cf, transmissionlosses, demand, hydrocapacity, cfhydroinflow, classlimits, transmissionislands,
-		efficiency, rampingrate, dischargetime, initialhydrostoragelevel, minflow_existinghydro, emissionsCO2, fuelcost,
+		efficiency, rampingrate, dischargetime, initialstoragelevel, minflow_existinghydro, emissionsCO2, fuelcost,
 		variablecost, smalltransmissionpenalty, investcost, crf, fixedcost, transmissioninvestcost, transmissionfixedcost, hydroeleccost)
 end

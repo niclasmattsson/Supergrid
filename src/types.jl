@@ -22,7 +22,7 @@ struct Params
 	efficiency					::AxisArray{Float64,1}
 	rampingrate					::AxisArray{Float64,1}
 	dischargetime				::AxisArray{Float64,3}
-	initialhydrostoragelevel	::Float64
+	initialstoragelevel			::Float64
 	minflow_existinghydro		::Float64
 	emissionsCO2				::AxisArray{Float64,1}	
 	fuelcost					::AxisArray{Float64,1}	
