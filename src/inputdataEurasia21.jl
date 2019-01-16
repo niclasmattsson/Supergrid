@@ -13,9 +13,9 @@ makesets(r::Symbol, hourinfo) = makesets([r], hourinfo)
 
 function makesets(REGION::Vector{Symbol}, hourinfo)
 	techdata = Dict(
-		:name => [:pv,  :csp, :wind, :offwind, :hydro,	  :coal,    :gasGT,   :gasCCGT, :bioGT,   :bioCCGT, :nuclear, :battery],
-		:type => [:vre,	:vre, :vre,  :vre,     :storage,  :thermal, :thermal, :thermal, :thermal, :thermal, :thermal, :storage],
-		:fuel => [:_,   :_,	  :_,    :_,       :_,        :coal,    :gas,     :gas,     :biogas,  :biogas,  :uranium, :_]
+		:name => [:pv,  :pvroof, :csp, :wind, :offwind, :hydro,	  :coal,    :gasGT,   :gasCCGT, :bioGT,   :bioCCGT, :nuclear, :battery],
+		:type => [:vre, :vre,	 :vre, :vre,  :vre,     :storage,  :thermal, :thermal, :thermal, :thermal, :thermal, :thermal, :storage],
+		:fuel => [:_,   :_,      :_,   :_,    :_,       :_,        :coal,    :gas,     :gas,     :biogas,  :biogas,  :uranium, :_]
 	)
 	nstorageclasses = (4,4)		# (cost classes, reservoir classes)
 	nvreclasses = 5
@@ -193,6 +193,7 @@ function makeparameters(sets, hourinfo)
 		:transmission	NaN			0				NaN			50			NaN			1
 		:battery		1200		0				12			10			0.9			1	# 8h discharge time, 1200 €/kW = 150 €/kWh
 		:pv				800			0				16			25			1			1
+		:pvroof			1200		0				24			25			1			1
 		:csp			1200		0				36			30			1			1	# add CSP data later
 		:hydro			10			0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 
 	]
@@ -233,7 +234,7 @@ function makeparameters(sets, hourinfo)
 
 	allclasses = union(sets.CLASS[:pv], sets.CLASS[:hydro], [:_])
 	cf = AxisArray(ones(numregions,length(TECH),length(allclasses),nhours), REGION, TECH, allclasses, HOUR)
-	classlimits = AxisArray(zeros(numregions,4,length(CLASS[:pv])), REGION, [:wind, :offwind, :pv, :csp], CLASS[:pv])
+	classlimits = AxisArray(zeros(numregions,5,length(CLASS[:pv])), REGION, [:wind, :offwind, :pv, :pvroof, :csp], CLASS[:pv])
 
 	# sync wind & solar time series with demand
 	# (ignore 2016 extra leap day for now, fix this later)
@@ -242,6 +243,7 @@ function makeparameters(sets, hourinfo)
 	cf[:,:wind,1:5,:] = permutedims(reducehours(windvars["CFtime_windonshoreA"][25:hoursperyear+24,:,:], 1, hourinfo), [2,3,1])
 	cf[:,:offwind,1:5,:] = permutedims(reducehours(windvars["CFtime_windoffshore"][25:hoursperyear+24,:,:], 1, hourinfo), [2,3,1])
 	cf[:,:pv,1:5,:] = permutedims(reducehours(solarvars["CFtime_pvplantA"][18:hoursperyear+17,:,:], 1, hourinfo), [2,3,1])
+	cf[:,:pvroof,1:5,:] = permutedims(reducehours(solarvars["CFtime_pvrooftop"][18:hoursperyear+17,:,:], 1, hourinfo), [2,3,1])
 	cf[:,:csp,1:5,:] = permutedims(reducehours(solarvars["CFtime_cspplantA"][18:hoursperyear+17,:,:], 1, hourinfo), [2,3,1])
 	cf[:,:wind,6:10,:] = permutedims(reducehours(windvars["CFtime_windonshoreB"][25:hoursperyear+24,:,:], 1, hourinfo), [2,3,1])
 	cf[:,:pv,6:10,:] = permutedims(reducehours(solarvars["CFtime_pvplantB"][18:hoursperyear+17,:,:], 1, hourinfo), [2,3,1])
@@ -252,6 +254,7 @@ function makeparameters(sets, hourinfo)
 	classlimits[:,:wind,1:5] = windvars["capacity_onshoreA"]
 	classlimits[:,:offwind,1:5] = windvars["capacity_offshore"]
 	classlimits[:,:pv,1:5] = solarvars["capacity_pvplantA"]
+	classlimits[:,:pvroof,1:5] = solarvars["capacity_pvrooftop"]
 	classlimits[:,:csp,1:5] = solarvars["capacity_cspplantA"]
 	classlimits[:,:wind,6:10] = windvars["capacity_onshoreB"]
 	classlimits[:,:pv,6:10] = solarvars["capacity_pvplantB"]

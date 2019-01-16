@@ -30,8 +30,9 @@ function showresults(model::ModelInfo)
 		#RGB([164,155,104]/255...),	#coal CCS
 		RGB([199,218,241]/255...),	#wind
 		RGB([149,179,215]/255...),	#wind offshore
-		RGB([255,255,50]/255...),	#solarPV
-		RGB([218,215,99]/255...),	#solarCSP
+		RGB([255,255,64]/255...),	#solarPV
+		RGB([240,224,0]/255...),	#PVrooftop
+		RGB([214,64,64]/255...),	#solarCSP
 		RGB([255,192,0]/255...),	#CCGT
 		RGB([99,172,70]/255...),	#bioCCGT
 		RGB([119,165,221]/255...),	#hydro
@@ -40,7 +41,7 @@ function showresults(model::ModelInfo)
 		RGB([157,87,205]/255...),	#battery
 	]
 
-	displaytechs = [:nuclear, :coal, :wind, :offwind, :pv,  :csp, :gasCCGT, :bioCCGT, :hydro, :bioGT, :gasGT, :battery]
+	displaytechs = [:nuclear, :coal, :wind, :offwind, :pv, :pvroof, :csp, :gasCCGT, :bioCCGT, :hydro, :bioGT, :gasGT, :battery]
 	techlabels = [k for r=1:1, k in displaytechs]
 	displayorder = [i for (i,k) in enumerate(TECH), d in displaytechs if d == k]
 
@@ -76,8 +77,8 @@ function showresults(model::ModelInfo)
 		regdemand = sumdimdrop(demand[regs,:], dims=1)
 		reghydrostorage = sumdimdrop(existingstoragelevel[:,[:hydro],regs], dims=3)
 
-		composite = plot(layout = 4, size=(1850,950), legend=false)
-		for (i,k) in enumerate([:wind, :offwind, :pv, :hydro])
+		composite = plot(layout = 6, size=(1850,950), legend=false)
+		for (i,k) in enumerate([:wind, :offwind, :hydro, :pv, :pvroof, :csp])
 			colors = [palette[findfirst(displaytechs .== k)]; RGB(0.9,0.9,0.9)]
 			used = [sum(getvalue(Capacity[r,k,c]) for r in REGION[regs]) for c in CLASS[k]]
 			lims = [sum(k == :hydro ? hydrocapacity[r,c] : classlimits[r,k,c] for r in REGION[regs]) for c in CLASS[k]]

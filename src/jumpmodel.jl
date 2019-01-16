@@ -37,13 +37,15 @@ function makevariables(m, sets)
 end
 
 function setbounds(sets, params, vars, options)
-	@unpack REGION, CLASS = sets
+	@unpack REGION, TECH, CLASS, techtype = sets
 	@unpack Capacity, TransmissionCapacity = vars
 	@unpack classlimits, hydrocapacity, transmissionislands = params
 	@unpack nuclearallowed, transmissionallowed = options
-	for r in REGION, k in [:wind, :offwind, :pv, :csp]
-		for c in CLASS[k]
-			setupperbound(Capacity[r,k,c], classlimits[r,k,c])
+	for r in REGION, k in TECH
+		if techtype[k] == :vre
+			for c in CLASS[k]
+				setupperbound(Capacity[r,k,c], classlimits[r,k,c])
+			end
 		end
 	end
 	for r in REGION
