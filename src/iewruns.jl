@@ -4,28 +4,33 @@ plotly()
 
 function IEWruns(hourinterval)
 	results = Dict()
+	allstatus = Dict()
 	for nuc in [false, true]
 		for tm in [:none, :islands, :all]
 			for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0]
 				println("\n\n\nNew run: nuclear=$nuc, transmission=$tm, cap=$cap.")
-				model = buildmodel(sampleinterval=hourinterval, carboncap=cap, maxbiocapacity=0.05, nuclearallowed=nuc, transmissionallowed=tm)
+				model = buildmodel(sampleinterval=hourinterval, carboncap=cap, maxbiocapacity=0.05, 
+									nuclearallowed=nuc, transmissionallowed=tm, threads=2)
 				println("\nSolving model...")
 				status = solve(model.modelname)
 				println("\nSolve status: $status")
 				results[nuc,tm,cap] = (status == :Optimal) ? sum(getvalue(model.vars.Systemcost)) : NaN
+				allstatus[nuc,tm,cap] = status
+				@save "iewruns1_$(hourinterval)h.jld2" results allstatus
 			end
 		end
 	end
-	@save "iewruns1_$(hourinterval)h.jld2" results
-	results
+	results, allstatus
 end
 
 function IEWruns2(hourinterval)
 	results = Dict()
+	allstatus = Dict()
 	for nuc in [false]
 		for tm in [:islands, :all]
 			for cap in [0.005]
-				options, hourinfo, sets, params = buildsetsparams(sampleinterval=hourinterval, carboncap=cap, maxbiocapacity=0.05, nuclearallowed=nuc, transmissionallowed=tm)
+				options, hourinfo, sets, params = buildsetsparams(sampleinterval=hourinterval, carboncap=cap, maxbiocapacity=0.05,
+										nuclearallowed=nuc, transmissionallowed=tm, threads=2)
 				pvcost = params.investcost[:pv,:a1]
 				pvroofcost = params.investcost[:pvroof,:a1]
 				batterycost = params.investcost[:battery,:_]
@@ -56,18 +61,19 @@ function IEWruns2(hourinterval)
 						status = solve(model.modelname)
 						println("\nSolve status: $status")
 						results[nuc,tm,cap,solar,battery] = (status == :Optimal) ? sum(getvalue(model.vars.Systemcost)) : NaN
+						allstatus[nuc,tm,cap,solar,battery] = status
+						@save "iewruns2_$(hourinterval)h.jld2" results allstatus
 					end
 				end
 			end
 		end
 	end
-	@save "iewruns2_$(hourinterval)h.jld2" results
-	results
+	results, allstatus
 end
 
 # using JLD2, Plots; @load "iewruns1_3h.jld2" res; plotly()
 function plotiew(res)
-	carboncaps = [1000; 200; 100; 50; 20; 10; 0]	
+	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 0]	
 	res0 = res[true,:all,1]
 	resmat1 = [res[true,tm,cap/1000]/res0 for cap in carboncaps, tm in [:none, :islands, :all]]
 	resmat2 = [res[false,tm,cap/1000]/res0 for cap in carboncaps, tm in [:none, :islands, :all]]
