@@ -40,7 +40,7 @@ function setbounds(sets, params, vars, options)
 	@unpack REGION, TECH, CLASS, techtype = sets
 	@unpack Capacity, TransmissionCapacity = vars
 	@unpack classlimits, hydrocapacity, transmissionislands = params
-	@unpack nuclearallowed, transmissionallowed = options
+	@unpack nuclearallowed, transmissionallowed, disabletechs = options
 	for r in REGION, k in TECH
 		if techtype[k] == :vre || k == :csp
 			for c in CLASS[k]
@@ -64,6 +64,9 @@ function setbounds(sets, params, vars, options)
 		if transmissionallowed == :none || (transmissionallowed == :islands && !transmissionislands[r1,r2])
 			setupperbound(TransmissionCapacity[r1,r2], 0.0)
 		end
+	end
+	for r in REGION, k in disabletechs, c in CLASS[k]
+		setupperbound(Capacity[r,k,c], 0.0)
 	end
 end
 
