@@ -57,8 +57,8 @@ function showresults(model::ModelInfo)
 			lr = length(REGION)
 			xpos = (1:lr)' .- 0.5
 			display(plot!([xpos; xpos], [zeros(lr)'; sum(demand,dims=2)'*hoursperperiod/1000], line=3, color=:black, labels=permutedims(repeat([""],lr))))
-			totelec = [sumdimdrop(annualelec[:,1:8],dims=2) sumdimdrop(annualelec[:,9:15],dims=2) sumdimdrop(annualelec[:,16:21],dims=2) annualelec[:,:TOTAL]]
-			display(groupedbar(["EU","CAS","China","TOTAL"],collect(totelec[displayorder,:]'/1e6), labels=techlabels, bar_position = :stack, size=(500,950), line=0, tickfont=14, legendfont=14, color_palette=palette))
+			# totelec = [sumdimdrop(annualelec[:,1:8],dims=2) sumdimdrop(annualelec[:,9:15],dims=2) sumdimdrop(annualelec[:,16:21],dims=2) annualelec[:,:TOTAL]]
+			# display(groupedbar(["EU","CAS","China","TOTAL"],collect(totelec[displayorder,:]'/1e6), labels=techlabels, bar_position = :stack, size=(500,950), line=0, tickfont=14, legendfont=14, color_palette=palette))
 			return nothing
 		end
 

@@ -1,20 +1,29 @@
-using HDF5, MAT
+using HDF5, MAT, DelimitedFiles, Statistics, Dates, TimeZones
 
-makesets(hourinfo) = makesets([:NOR, :FRA, :GER, :UK, :MED, :BAL, :SPA, :CEN], hourinfo)
+ # :NOR,:FRA,:GER,:UK,:MED,:BAL,:SPA,:CEN,:BUK,:TCC,:KZK,:CAS,:RU_C,:RU_SW,:RU_VL,:CH_N,:CH_NE,:CH_E,:CH_SC,:CH_SW,:CH_NW
+ # makesets(hourinfo) = makesets([:NOR, :FRA, :GER, :UK, :MED, :BAL, :SPA, :CEN, :CH_N, :CH_NE, :CH_E, :CH_SC, :CH_SW, :CH_NW], hourinfo)
+function makesets(hourinfo)
+	path = joinpath(dirname(@__FILE__), "..")
+	distancevars = matread("$path/inputdata/distances_Europe8.mat")
+	regionlist = Symbol.(vec(distancevars["regionlist"]))
+	regionlist = regionlist[1:4]
+	makesets(regionlist, hourinfo)
+end
+
 makesets(r::Symbol, hourinfo) = makesets([r], hourinfo)
 
 function makesets(REGION::Vector{Symbol}, hourinfo)
 	techdata = Dict(
-		:name => [:pv,  :csp, :wind, :offwind, :hydro,	  :coal,    :gasGT,   :gasCCGT, :bioGT,   :bioCCGT, :nuclear, :battery],
-		:type => [:vre,	:vre, :vre,  :vre,     :storage,  :thermal, :thermal, :thermal, :thermal, :thermal, :thermal, :storage],
-		:fuel => [:_,   :_,	  :_,    :_,       :_,        :coal,    :gas,     :gas,     :biogas,  :biogas,  :uranium, :_]
+		:name => [:pv,  :pvroof, :csp,     :wind, :offwind, :hydro,	   :coal,    :gasGT,   :gasCCGT, :bioGT,   :bioCCGT, :nuclear, :battery],
+		:type => [:vre, :vre,	 :storage, :vre,  :vre,     :storage,  :thermal, :thermal, :thermal, :thermal, :thermal, :thermal, :storage],
+		:fuel => [:_,   :_,      :_,       :_,    :_,       :_,        :coal,    :gas,     :gas,     :biogas,  :biogas,  :uranium, :_]
 	)
 	nstorageclasses = (4,4)		# (cost classes, reservoir classes)
 	nvreclasses = 5
 
 	numtechs = length(techdata[:name])
 	reservoirs = collect('a':'z')[1:nstorageclasses[2]]
-	vreclass = [Symbol("$letter$number") for letter in ["a"] for number = 1:nvreclasses]		# add B classes later
+	vreclass = [Symbol("$letter$number") for letter in ["a", "b"] for number = 1:nvreclasses]
 	hydroclass = [:x0;  [Symbol("$letter$number") for letter in reservoirs for number = 1:nstorageclasses[1]]]
 	noclass = [:_]
 	techtype = Dict(techdata[:name][i] => techdata[:type][i] for i=1:numtechs)
@@ -22,12 +31,18 @@ function makesets(REGION::Vector{Symbol}, hourinfo)
 
 	TECH = techdata[:name]
 	FUEL = [:_, :coal, :gas, :biogas, :uranium]
-	CLASS = Dict(k => k == :hydro ? hydroclass : techtype[k] == :vre ? vreclass : noclass for k in TECH)
-	STORAGECLASS = Dict(k => k == :hydro ? [:x0;  Symbol.(reservoirs)] : [:_] for k in TECH)
+	CLASS = Dict(k => k == :hydro ? hydroclass : techtype[k] == :vre || k == :csp ? vreclass : noclass for k in TECH)
+	CLASS[:transmission] = noclass
+	STORAGECLASS = Dict(k => [:_] for k in TECH)
+	STORAGECLASS[:hydro] = [:x0;  Symbol.(reservoirs)]
+	STORAGECLASS[:csp] = vreclass
 
 	reservoirclass = Dict(r => [Symbol("$r$number") for number = 1:nstorageclasses[1]] for r in Symbol.(reservoirs))
 	reservoirclass[:x0] = [:x0]
 	reservoirclass[:_] = [:_]
+	for vc in vreclass
+		reservoirclass[vc] = [vc]
+	end
 
 	HOUR = 1:Int(length(hourinfo.hourindexes)/hourinfo.sampleinterval)		# later use hoursperyear() in helperfunctions
 
@@ -70,112 +85,150 @@ function makeparameters(sets, hourinfo)
 	hoursperperiod = Int(hourinfo.hoursperperiod)
 
 	discountrate = 0.05
-	initialhydrostoragelevel = 0.7		# make this tech dependent later
-	minflow_existinghydro = 0.2
+	initialstoragelevel = 0.7		# make this tech dependent later
+	minflow_existinghydro = 0.4
+	cspsolarmultiple = 3.0			# peak capacity of collectors divided by turbine power
 
 	numregions = length(REGION)
 	nhours = length(HOUR)
 	nhydro = length(CLASS[:hydro])
+	nclasses = length(CLASS[:pv])
 
 	path = joinpath(dirname(@__FILE__), "..")
 
-	# demand data is not currently based on same year as solar & wind data!!!
-	file = h5open("$path/inputdata/demand_Europe10.h5", "r")
-	readdemand::Matrix{Float64} = read(file, "demand")'/1000
-	#distance = read(file, "distance")		# not used yet
-	close(file)
-	demand = AxisArray(ten2eight(reducehours(readdemand, 2, hourinfo)), REGION, HOUR)		# GW
+	# read regional distances and SSP data from Matlab file
+	distancevars = matread("$path/inputdata/distances_Europe8.mat")
+	population = vec(distancevars["population"])[1:numregions]		# Mpeople in SSP2 2050
+	sspdemand = vec(distancevars["demand"])[1:numregions]			# TWh/year (demand in SSP2 2050 major regions downscaled to countries using BP 2017 stats)
+
+	demand = AxisArray(zeros(numregions, nhours), REGION, HOUR)		# GW
+
+	# read synthetic demand data (using local time) and shift to UTC
+	# (note: not currently based on same year as solar & wind data!!!)
+	# if time zone code errors then run TimeZones.TZData.compile(max_year=2200), see https://timezonesjl.readthedocs.io/en/stable/faq/
+	zones = ["Europe/Oslo","Europe/Paris","Europe/Berlin","Europe/London","Europe/Rome","Europe/Warsaw","Europe/Madrid","Europe/Budapest","Europe/Sofia","Europe/Istanbul","Asia/Almaty","Asia/Ashgabat","Europe/Moscow","Europe/Moscow","Europe/Moscow","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai"]	
+	hourrange = DateTime(2050,1,1,0):Hour(1):DateTime(2050,12,31,23)
+	utc = [ZonedDateTime(h, TimeZone("UTC")) for h in hourrange]
+	for (i,reg) in enumerate(REGION)
+		data = readdlm("$path/inputdata/syntheticdemand/synthetic2050_region$(i)_$reg.csv", ',')
+		demandlocaltime = data[2:end, 2]
+		timezone = TimeZone(zones[i])
+		localtime = [astimezone(ut, timezone) for ut in utc]
+		localoffset = [Dates.value.(lt.zone.offset)÷3600 for lt in localtime]
+		indexoffset = mod.((1:8760) + localoffset .- 1, 8760) .+ 1
+		demandutc = demandlocaltime[indexoffset]
+		demand[i,:] = reducehours(demandutc, 1, hourinfo) * 1000
+		# println("$reg ($i): ", sspdemand[i], " ", mean(demand[i,:])*8760/1000)	# check total regional demand
+	end
 
 	hydrovars = matread("$path/inputdata/GISdata_hydro_europe8.mat")
 	hydrocapacity = AxisArray(zeros(numregions,nhydro), REGION, CLASS[:hydro])
 	hydroeleccost = AxisArray(zeros(numregions,nhydro), REGION, CLASS[:hydro])
 	monthlyinflow = AxisArray(zeros(numregions,nhydro,12), REGION, CLASS[:hydro], 1:12)
 	cfhydroinflow = AxisArray(zeros(numregions,nhydro,nhours), REGION, CLASS[:hydro], HOUR)
-	dischargetime = AxisArray(zeros(numregions,2,1+nhydro), REGION, [:hydro,:battery], [CLASS[:hydro]; :_])
+	dischargetime = AxisArray(zeros(numregions,3,1+nhydro+nclasses), REGION, [:hydro,:battery,:csp], [CLASS[:hydro]; CLASS[:csp]; :_])
 	
-	hydrocapacity[:,:x0] = hydrovars["existingcapac"]
-	hydrocapacity[:,2:end] = reshape(hydrovars["potentialcapac"], numregions, nhydro-1)
-	hydrocapacity[isnan.(hydrocapacity)] = 0
+	hydrocapacity[:,:x0] = hydrovars["existingcapac"][1:numregions]
+	hydrocapacity[:,2:end] = reshape(hydrovars["potentialcapac"][1:numregions,:,:], numregions, nhydro-1)
+	hydrocapacity[isnan.(hydrocapacity)] = zeros(sum(isnan.(hydrocapacity)))
 
 	# eleccost = capcost * crf / (CF * 8760)  =>   eleccost2/eleccost1 = crf2/crf1
 	# 1$ = 0.9€ (average 2015-2017) 
-	hydroeleccost[:,2:end] = reshape(hydrovars["potentialmeancost"], numregions, nhydro-1)		# $/kWh with 10% discount rate
-	hydroeleccost[:,:] = hydroeleccost[:,:] * CRF(discountrate,40)/CRF(0.1,40) * 0.9 * 1000		# €/MWh
-	hydroeleccost[isnan.(hydroeleccost)] = 999
+	hydroeleccost[:,2:end] = reshape(hydrovars["potentialmeancost"][1:numregions,:,:], numregions, nhydro-1)		# $/kWh with 10% discount rate
+	hydroeleccost[:,:] = hydroeleccost[:,:] * CRF(discountrate,40)/CRF(0.1,40) * 0.9 * 1000		# €/MWh    (0.9 €/$)
+	hydroeleccost[isnan.(hydroeleccost)] = fill(999, sum(isnan.(hydroeleccost)))
 
-	monthlyinflow[:,:x0,:] = hydrovars["existinginflowcf"]
-	monthlyinflow[:,2:end,:] = reshape(hydrovars["potentialinflowcf"], numregions, nhydro-1, 12)
-	monthlyinflow[isnan.(monthlyinflow)] = 0
+	monthlyinflow[:,:x0,:] = hydrovars["existinginflowcf"][1:numregions,:]
+	monthlyinflow[:,2:end,:] = reshape(hydrovars["potentialinflowcf"][1:numregions,:,:,:], numregions, nhydro-1, 12)
+	monthlyinflow[isnan.(monthlyinflow)] = zeros(sum(isnan.(monthlyinflow)))
 
 	hydrostoragecapacity = [	# TWh
 		:NOR	:FRA	:GER	:UK		:MED	:BAL	:SPA	:CEN
 		121.43	3.59	0		0		9.2		0		16.6	7.4
 	]
-	dischargetime[:,:hydro,:x0] = hydrostoragecapacity[2,:]./hydrocapacity[:,:x0] * 1000
-	dischargetime[[:GER,:UK,:BAL],:hydro,:x0] = 300
-	# dischargetime[:,:hydro,:x0] = 168*4		# assume average discharge time 4 weeks for existing hydro
-	dischargetime[:,:hydro,2:end-1] = reshape(hydrovars["potentialmeandischargetime"], numregions, nhydro-1)
-	dischargetime[:,:battery,:_] = 8
-	dischargetime[isnan.(dischargetime)] = 10000
-	dischargetime[dischargetime .> 10000] = 10000
+	dischargetime[:,:hydro,:x0] = hydrostoragecapacity[2,1:numregions]./hydrocapacity[:,:x0] * 1000
+	dischargetime[intersect([:GER,:UK,:BAL],REGION),:hydro,:x0] .= 300
+	dischargetime[:,:hydro,2:end-1-nclasses] = reshape(hydrovars["potentialmeandischargetime"][1:numregions,:,:], numregions, nhydro-1)
+
+	dischargetime[:,:battery,:_] .= 1
+	dischargetime[:,:csp,:] .= 9
+	dischargetime[isnan.(dischargetime)] = fill(10000, sum(isnan.(dischargetime)))
+	dischargetime[dischargetime .> 10000] = fill(10000, sum(dischargetime .> 10000))
 
 	# monthly to hourly hydro inflow
 	dayspermonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 	lasthour = 24 ÷ hoursperperiod * cumsum(dayspermonth)
-	firsthour = [1; 1+lasthour[1:end-1]]
+	firsthour = [1; 1 .+ lasthour[1:end-1]]
 	for m = 1:12
 		for i = firsthour[m]:lasthour[m]
 			cfhydroinflow[:,:,i] = monthlyinflow[:,:,m]
 		end
 	end
-	cfhydroinflow[cfhydroinflow .< 0.01] = 0
+	cfhydroinflow[cfhydroinflow .< 0.01] = zeros(sum(cfhydroinflow .< 0.01))
 
-	transmissioncostdata = [	# €/kW
-		:_		:NOR	:FRA	:GER	:UK		:MED	:BAL	:SPA	:CEN
-		:NOR	0		0		600		1200	0		1000	0		0
-		:FRA	0		0		500		600		1200	0		500		1000
-		:GER	600		500		0		900		0		500		0		400
-		:UK		1200	600		900		0		0		0		0		0
-		:MED	0		1200	0		0		0		0		0		650
-		:BAL	1000	0		500		0		0		0		0		400
-		:SPA	0		500		0		0		0		0		0		0
-		:CEN	0		1000	400		0		650		400		0		0
-	]
-	transmissioncost = AxisArray(Float64.(transmissioncostdata[2:end,2:end]), REGION, REGION)		# €/kW
-	transmissionlosses = AxisArray(fill(0.05,numregions,numregions), REGION, REGION)		# maybe proportional to distance (costs) later?
+	distances = distancevars["distances"][1:numregions,1:numregions]
+	connected = distancevars["connected"][1:numregions,1:numregions]
+	connectedoffshore = distancevars["connectedoffshore"][1:numregions,1:numregions]
+
+	# from Bogdanov & Breyer (2016) "North-East Asian Super Grid..."
+	transmissioncostdata = connected .* (180 .+ 0.612*distances) .+ connectedoffshore .* (180 .+ 0.992*distances)
+	transmissionfixedcostdata = connected .* (1.8 .+ 0.0075*distances) .+ connectedoffshore .* (1.8 .+ 0.0010*distances)
+	transmissioninvestcost = AxisArray(transmissioncostdata, REGION, REGION)		# €/kW
+	transmissionfixedcost = AxisArray(transmissionfixedcostdata, REGION, REGION)		# €/kW
+	transmissionlossdata = (connected .| connectedoffshore) .* (0.014 .+ 0.016*distances/1000)
+	transmissionlosses = AxisArray(transmissionlossdata, REGION, REGION)
 	smalltransmissionpenalty = 0.1		# €/MWh elec
 
-	investdata = [
-		#				investcost	variablecost	fixedcost	lifetime	efficiency
-		#				€/kW		€/MWh elec		€/kW/year	years
-		:gasGT			380			0.7				50			30			0.4
-		:gasCCGT		760			0.8				50			30			0.7
-		:coal			1400		0				80			35			0.4
-		:bioGT			380			0.7				50			30			0.4
-		:bioCCGT		760			0.8				50			30			0.7
-		:nuclear		5100		0				160			60			0.4
-		:wind			1400		0				44			25			1
-		:offwind		2800		0				100			25			1
-		:transmission	NaN			0				0			40			NaN
-		:battery		1200		0				0			10			0.85	# 8h discharge time, 1200 €/kW = 150 €/kWh
-		:pv				600			0				19			25			1
-		:csp			1200		0				50			30			1	# add CSP data later
-		# :hydroRoR and :hydroDam are sunk costs
-		:hydro			10			0				0			80			1	# small artificial investcost so it doesn't overinvest in free capacity 
-		# :hydroRoR		0			0				0			80			1
-		# :hydroDam		0			0				0			80			1	# change hydroDam efficiency later
+	transmissionislands = AxisArray(zeros(Bool, numregions,numregions), REGION, REGION)
+	islandindexes = [1:numregions]
+	for ndx in islandindexes
+		transmissionislands[ndx,ndx] .= true
+	end
+
+	# PV and battery costs have high/mid/low costs:  high = 1.5*mid, low = 0.5*mid
+	techdata = [
+		#				investcost 	variablecost	fixedcost	lifetime	efficiency	rampingrate
+		#				€/kW		€/MWh elec		€/kW/year	years					share of capacity per hour
+		:gasGT			500			1				10			30			0.4			1
+		:gasCCGT		800			1				16			30			0.6			0.3
+		:coal			1600		2				48			30			0.45		0.15
+		:bioGT			500			1				10			30			0.4			1
+		:bioCCGT		800			1				16			30			0.6			0.3
+		:nuclear		5000		3				150			50			0.4			0.05
+		:wind			1200		0				36			25			1			1
+		:offwind		2000		0				60			25			1			1
+		:transmission	NaN			0				NaN			50			NaN			1
+		:battery		150			0				1.5			10			0.9			1	# 1h discharge time, 150 €/kW = 150 €/kWh
+		:pv				800			0				16			25			1			1
+		:pvroof			1200		0				24			25			1			1
+		:csp			4000		0				36			30			1			1	# adjust investcost for solar multiple below
+		:hydro			10			0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 
 	]
-	investtechs = investdata[:,1]
-	investdata = Float64.(investdata[:,2:end])
-	investcost = AxisArray(investdata[:,1], investtechs)	# €/kW
-	variablecost = AxisArray(investdata[:,2], investtechs)	# €/MWh elec
-	fixedcost = AxisArray(investdata[:,3], investtechs)		# €/kW/year
-	lifetime = AxisArray(investdata[:,4], investtechs)		# years
-	efficiency = AxisArray(investdata[:,5], investtechs)
+	techs = techdata[:,1]
+	techdata = Float64.(techdata[:,2:end])
+	baseinvestcost = AxisArray(techdata[:,1], techs)	# €/kW
+	variablecost = AxisArray(techdata[:,2], techs)		# €/MWh elec
+	fixedcost = AxisArray(techdata[:,3], techs)			# €/kW/year
+	lifetime = AxisArray(techdata[:,4], techs)			# years
+	efficiency = AxisArray(techdata[:,5], techs)
+	rampingrate = AxisArray(techdata[:,6], techs)
 
-	fuelcost = AxisArray(Float64[0, 8, 30, 60, 8], [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
+	# fuel cost references:
+	# 1. https://www.gov.uk/government/statistical-data-sets/prices-of-fuels-purchased-by-major-power-producers
+	# 2. https://oilprice.com/Energy/Natural-Gas/European-Natural-Gas-Prices-Are-Set-To-Rise-Further.html
+	# 3. https://www.bloomberg.com/news/articles/2018-09-03/coal-nears-100-in-europe-as-china-s-power-demand-draws-in-fuel
+	# 4. https://www.frisch.uio.no/ressurser/LIBEMOD/pdf/phase_out_28mai2015_golombek_powerpoint.pdf
+	# 5. http://www.world-nuclear.org/information-library/economic-aspects/economics-of-nuclear-power.aspx
+	# 6. https://www.gasforclimate2050.eu/files/files/Ecofys_Gas_for_Climate_Report_Study_March18.pdf  (page 19, section 3.4, figure 7)
+	# Sepulveda/Jenkins:  gas & biogas 21 €/MWh, uranium 3 €/MWh
+	# 1: coal 11-12 €/MWh, gas 19-21 €/MWh,  2: gas 20-30 €/MWh,  3: coal 70-90 €/ton = (25 MJ/kg) = 2.8-3.6 €/GJ = 10-13 €/MWh
+	# 4: gas 45*.5 = 22 €/MWh, coal 22.3*.4 = 9 €/MWh, bio 26.4*.4 = 11 €/MWh, nuclear 6.7*.35 = 2.3 €/MWh
+	# 5: nuclear fuel pellets 0.39 USD/kWh = 3.2 €/MWh    (see also Stuff/Nuclear fuel costs.xlsx)
+	# 6: biomethane anaerobic digestion 96 €/MWh (2015), 60 €/MWh (2050), thermal gasification 37 €/MWh (2050)
+	
+	fuelcost = AxisArray(Float64[0, 11, 22, 37, 3.2], [:_, :coal, :gas, :biogas, :uranium])		# €/MWh fuel
 
-	crf = AxisArray(discountrate ./ (1 - 1 ./(1+discountrate).^lifetime), investtechs)
+	crf = AxisArray(discountrate ./ (1 .- 1 ./(1+discountrate).^lifetime), techs)
 
 	emissionsCO2 = AxisArray(zeros(length(FUEL)), FUEL)
 	emissionsCO2[[:coal,:gas]] = [0.330, 0.202]		# kgCO2/kWh fuel (or ton/MWh or kton/GWh)
@@ -183,28 +236,62 @@ function makeparameters(sets, hourinfo)
 	# do something with B classes (and pvrooftop) later
 	windvars = matread("$path/inputdata/GISdata_wind2016_europe8.mat")
 	solarvars = matread("$path/inputdata/GISdata_solar2016_europe8.mat")
+	# windvars = matread("$path/inputdata/GISdata_wind2016_1000km_eurochine14.mat")
+	# solarvars = matread("$path/inputdata/GISdata_solar2016_1000km_eurochine14.mat")
 
 	allclasses = union(sets.CLASS[:pv], sets.CLASS[:hydro], [:_])
 	cf = AxisArray(ones(numregions,length(TECH),length(allclasses),nhours), REGION, TECH, allclasses, HOUR)
-	capacitylimits = AxisArray(zeros(numregions,4,length(CLASS[:pv])), REGION, [:wind, :offwind, :pv, :csp], CLASS[:pv])
+	classlimits = AxisArray(zeros(numregions,5,length(CLASS[:pv])), REGION, [:wind, :offwind, :pv, :pvroof, :csp], CLASS[:pv])
 
 	# sync wind & solar time series with demand
 	# (ignore 2016 extra leap day for now, fix this later)
 	# note first wind data is at 00:00 and first solar data is at 07:00
 	# assume first demand data is at 00:00
-	cf[:,:wind,1:5,:] = permutedims(reducehours(windvars["CFtime_windonshoreA"][25:hoursperyear+24,:,:], 1, hourinfo), [2,3,1])
-	cf[:,:offwind,1:5,:] = permutedims(reducehours(windvars["CFtime_windoffshore"][25:hoursperyear+24,:,:], 1, hourinfo), [2,3,1])
-	cf[:,:pv,1:5,:] = permutedims(reducehours(solarvars["CFtime_pvplantA"][18:hoursperyear+17,:,:], 1, hourinfo), [2,3,1])
-	cf[:,:csp,1:5,:] = permutedims(reducehours(solarvars["CFtime_cspplantA"][18:hoursperyear+17,:,:], 1, hourinfo), [2,3,1])
-	cf[isnan.(cf)] = 0
-	cf[cf .< 0.01] = 0		# set small values to 0 for better numerical stability
+	cf[:,:wind,1:5,:] = permutedims(reducehours(windvars["CFtime_windonshoreA"][25:hoursperyear+24,1:numregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:offwind,1:5,:] = permutedims(reducehours(windvars["CFtime_windoffshore"][25:hoursperyear+24,1:numregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:pv,1:5,:] = permutedims(reducehours(solarvars["CFtime_pvplantA"][18:hoursperyear+17,1:numregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:pvroof,1:5,:] = permutedims(reducehours(solarvars["CFtime_pvrooftop"][18:hoursperyear+17,1:numregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:csp,1:5,:] = permutedims(reducehours(solarvars["CFtime_cspplantA"][18:hoursperyear+17,1:numregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:wind,6:10,:] = permutedims(reducehours(windvars["CFtime_windonshoreB"][25:hoursperyear+24,1:numregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:pv,6:10,:] = permutedims(reducehours(solarvars["CFtime_pvplantB"][18:hoursperyear+17,1:numregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:csp,6:10,:] = permutedims(reducehours(solarvars["CFtime_cspplantB"][18:hoursperyear+17,1:numregions,:], 1, hourinfo), [2,3,1])
+	cf[isnan.(cf)] = zeros(sum(isnan.(cf)))
+	cf[cf .< 0.01] = zeros(sum(cf .< 0.01))		# set small values to 0 for better numerical stability
 
-	capacitylimits[:,:wind,:] = windvars["capacity_onshoreA"]
-	capacitylimits[:,:offwind,:] = windvars["capacity_offshore"]
-	capacitylimits[:,:pv,:] = solarvars["capacity_pvplantA"]
-	capacitylimits[:,:csp,:] = solarvars["capacity_cspplantA"]
+	classlimits[:,:wind,1:5] = windvars["capacity_onshoreA"][1:numregions,:]
+	classlimits[:,:offwind,1:5] = windvars["capacity_offshore"][1:numregions,:]
+	classlimits[:,:pv,1:5] = solarvars["capacity_pvplantA"][1:numregions,:]
+	classlimits[:,:pvroof,1:5] = solarvars["capacity_pvrooftop"][1:numregions,:]
+	classlimits[:,:csp,1:5] = solarvars["capacity_cspplantA"][1:numregions,:]
+	classlimits[:,:wind,6:10] = windvars["capacity_onshoreB"][1:numregions,:]
+	classlimits[:,:pv,6:10] = solarvars["capacity_pvplantB"][1:numregions,:]
+	classlimits[:,:csp,6:10] = solarvars["capacity_cspplantB"][1:numregions,:]
 
-	return Params(cf, transmissionlosses, demand, hydrocapacity, cfhydroinflow, capacitylimits,
-		efficiency, dischargetime, initialhydrostoragelevel, minflow_existinghydro, emissionsCO2,
-		fuelcost, variablecost, smalltransmissionpenalty, investcost, crf, fixedcost, transmissioncost, hydroeleccost)
+	investcost = AxisArray(zeros(length(techs),length(allclasses)), techs, allclasses)	# €/kW
+	for k in techs, c in CLASS[k]
+		investcost[k,c] = baseinvestcost[k]
+	end
+	for k in [:wind,:pv,:csp]
+		investcost[k,6:10] .= baseinvestcost[k]*1.1
+	end
+
+	# adjust CSP parameters for solar multiple, convert solar capacity to electrical power
+	# collectors about 40% of total cost (IRENA 2012), scale up the collector component of the cost
+	investcost[:csp,:] = investcost[:csp,:] * (0.6 + 0.4*cspsolarmultiple)		# base data is per kW electrical for solar multiple 1 
+	cf[:,:csp,:,:] = cf[:,:csp,:,:] * cspsolarmultiple							# OK if this surpasses 100%
+	classlimits[:,:csp,:] = classlimits[:,:csp,:] / cspsolarmultiple			# GIS data calculated as peak solar power
+	# The Capacity variable of the model should now be correct (turbine capacity, with a larger solar collector field)
+
+	# # check demand/solar synchronization
+	# plotly()
+	# for r = 1:numregions
+	# 	tt1 = 8760÷2÷hoursperperiod		# test winter, spring, summer (÷12, ÷3, ÷2)
+	# 	tt = tt1:tt1+2*24÷hoursperperiod
+	# 	qq = [demand[r,tt] maximum(cf[r,:pv,1:5,tt],dims=1)']
+	# 	display(plot(qq./maximum(qq,dims=1), size=(1850,950)))
+	# end
+
+	return Params(cf, transmissionlosses, demand, hydrocapacity, cfhydroinflow, classlimits, transmissionislands,
+		efficiency, rampingrate, dischargetime, initialstoragelevel, minflow_existinghydro, emissionsCO2, fuelcost,
+		variablecost, smalltransmissionpenalty, investcost, crf, fixedcost, transmissioninvestcost, transmissionfixedcost, hydroeleccost)
 end
