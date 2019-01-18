@@ -6,7 +6,7 @@ function makesets(hourinfo)
 	path = joinpath(dirname(@__FILE__), "..")
 	distancevars = matread("$path/inputdata/distances_Europe8.mat")
 	regionlist = Symbol.(vec(distancevars["regionlist"]))
-	regionlist = regionlist[1:4]
+	# regionlist = regionlist[1:4]
 	makesets(regionlist, hourinfo)
 end
 
@@ -198,7 +198,7 @@ function makeparameters(sets, hourinfo)
 		:wind			1200		0				36			25			1			1
 		:offwind		2000		0				60			25			1			1
 		:transmission	NaN			0				NaN			50			NaN			1
-		:battery		150			0				1.5			10			0.9			1	# 1h discharge time, 150 €/kW = 150 €/kWh
+		:battery		150			0.1				1.5			10			0.9			1	# 1h discharge time, 150 €/kW = 150 €/kWh
 		:pv				800			0				16			25			1			1
 		:pvroof			1200		0				24			25			1			1
 		:csp			4000		0				36			30			1			1	# adjust investcost for solar multiple below

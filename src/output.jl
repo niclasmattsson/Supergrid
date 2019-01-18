@@ -13,7 +13,7 @@ function showresults(model::ModelInfo)
 	capac = NamedArray([capacmat sum(capacmat, dims=2)], (TECH, [REGION; :TOTAL]))
 	elec = [sum(getvalue(Electricity[r,k,c,h]) for c in CLASS[k]) for h in HOUR, k in TECH, r in REGION]
 	annualelec = NamedArray([sumdimdrop(elec,dims=1) sumdimdrop(elec, dims=(1,3))], (TECH, [REGION; :TOTAL]), (:TECH, :REGION))
-	charge = -[getvalue(Charging[r,:battery,h]) for h in HOUR, r in REGION]
+	charge = [getvalue(Charging[r,:battery,h]) for h in HOUR, r in REGION]
 	storagetechs = [k for k in TECH if techtype[k] == :storage]
 	existingstoragelevel = NamedArray(
 			[sum(getvalue(StorageLevel[r,k,c,h]) for c in STORAGECLASS[k]) for h in HOUR, k in storagetechs, r in REGION],
@@ -77,7 +77,7 @@ function showresults(model::ModelInfo)
 		end
 
 		regelec = sumdimdrop(elec[:,:,regs], dims=3)[:,displayorder] / hoursperperiod
-		regcharge = sumdimdrop(charge[:,regs], dims=2)
+		regcharge = sumdimdrop(charge[:,regs], dims=2) / hoursperperiod
 		regdemand = sumdimdrop(demand[regs,:], dims=1)
 
 		composite = plot(layout = 6, size=(1850,950), legend=false)
@@ -91,15 +91,21 @@ function showresults(model::ModelInfo)
 
 		if plotstoragetech != :none
 			regstorage = sumdimdrop(existingstoragelevel[:,[plotstoragetech],regs], dims=3)
-			display(plot(regstorage, size=(1850,950), tickfont=16, legendfont=16))
+			p = plot(regstorage, size=(1850,950), tickfont=16, legendfont=16, label="storage level (TWh)")
+			if plotstoragetech == :battery
+				plot!(regcharge/1000, label="charge (TWh/h)")
+				batteryelec = sumdimdrop([getvalue(Electricity[r,:battery,:_,h]) for r in REGION, h in HOUR][regs,:], dims=1) / hoursperperiod
+				plot!(batteryelec/1000, label="discharge (TWh/h)")
+			end
+			display(p)
 		end
 
 		# level = [getvalue(StorageLevel[r,:battery,:_,h])*100 for h in HOUR, r in REGION]
 		# reglevel = sumdimdrop(level[:,regs], dims=2)
-		# display(plot(HOUR,[-regcharge regelec[:,12] reglevel],size=(1850,950)))
+		# display(plot(HOUR,[regcharge regelec[:,12] reglevel],size=(1850,950)))
 
 		stackedarea(HOUR, regelec, labels=techlabels, size=(1850,950), line=0, tickfont=16, legendfont=16, color_palette=palette)
-		plot!(HOUR, regcharge)
+		plot!(HOUR, -regcharge)
 		display(plot!(HOUR, regdemand, c=:black))
 		nothing
 	end
