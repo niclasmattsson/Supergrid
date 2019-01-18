@@ -5,6 +5,7 @@ function initjumpmodel(options)
 	# https://www.ibm.com/support/knowledgecenter/SSSA5P_12.8.0/ilog.odms.cplex.help/CPLEX/Parameters/topics/introListAlpha.html
 	# https://www.ibm.com/support/knowledgecenter/SSSA5P_12.8.0/ilog.odms.cplex.help/CPLEX/UsrMan/topics/cont_optim/barrier/19_tuning_title_synopsis.html
 		m = Model(solver=CplexSolver(CPXPARAM_LPMethod=4, CPXPARAM_Threads=threads, CPXPARAM_Read_Scale=1, CPXPARAM_Preprocessing_Dual=-1,
+					CPXPARAM_Barrier_ConvergeTol=1e-8,
 					CPXPARAM_Barrier_Crossover=-1, CPXPARAM_Emphasis_Numerical=1, CPXPARAM_ScreenOutput=Int(showsolverlog)))
 					# CPXPARAM_Barrier_ConvergeTol=1e-8 (default), CPXPARAM_Barrier_Display=2, CPXPARAM_Barrier_ColNonzeros=100,
 					# CPXPARAM_Barrier_Crossover=-1, CPXPARAM_Barrier_Crossover=2, CPXPARAM_Emphasis_Memory=1,
@@ -27,7 +28,7 @@ function makevariables(m, sets)
 		FuelUse[r in REGION, f in FUEL]	>= 0											# GWh fuel/year
 		Electricity[r in REGION, k in TECH, c in CLASS[k], h in HOUR] >= 0				# GWh elec/period
 		Charging[r in REGION, k in TECH, h in HOUR; techtype[k] == :storage] >= 0		# GWh elec/period (electricity used to charge)
-		StorageLevel[r in REGION, k in TECH, c in STORAGECLASS[k], h in HOUR; techtype[k] == :storage] >= 0		# TWh elec (in storage)
+		StorageLevel[r in REGION, k in TECH, c in STORAGECLASS[k], h in HOUR; techtype[k] == :storage] >= 0	 # TWh elec (in storage)
 		Transmission[r1 in REGION, r2 in REGION, h in HOUR] >= 0						# GWh elec/period
 		TransmissionCapacity[r1 in REGION, r2 in REGION] >= 0							# GW elec
 		Capacity[r in REGION, k in TECH, c in CLASS[k]] >= 0							# GW elec
@@ -92,7 +93,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 
 		# <= instead of == to avoid need of slack variable to deal with spillage during spring floods, etc
 		StorageBalance[r in REGION, k in TECH, sc in STORAGECLASS[k], h in HOUR; techtype[k] == :storage],
-			StorageLevel[r,k,sc,h] <= StorageLevel[r,k,sc, (h>1) ? h-1 : length(HOUR)] +		# unit: energy diff per period (TWh/period)
+			(StorageLevel[r,k,sc,h] - StorageLevel[r,k,sc, (h>1) ? h-1 : length(HOUR)]) / 1 <=  # unit: energy diff per period (TWh/period)
 				0.001 * Charging[r,k,h] +
 				+ (k == :hydro ? 0.001 * hoursperperiod * sum(cfhydroinflow[r,c,h] * Capacity[r,:hydro,c] for c in reservoirclass[sc])
 								: 0.0) +
@@ -119,7 +120,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 			Capacity[r,:bioGT,:_] + Capacity[r,:bioCCGT,:_] <= maxbiocapacity * maxdemand[r]
 
 		ChargingNeedsBattery[r in REGION, h in HOUR],
-			Charging[r,:battery,h] <= Capacity[r,:battery, :_]
+			Charging[r,:battery,h] <= Capacity[r,:battery, :_] * hoursperperiod
 
 		MaxTransmissionCapacity[r1 in REGION, r2 in REGION, h in HOUR],
 			Transmission[r1,r2,h] <= TransmissionCapacity[r1,r2] * hoursperperiod
