@@ -5,10 +5,9 @@ function initjumpmodel(options)
 	# https://www.ibm.com/support/knowledgecenter/SSSA5P_12.8.0/ilog.odms.cplex.help/CPLEX/Parameters/topics/introListAlpha.html
 	# https://www.ibm.com/support/knowledgecenter/SSSA5P_12.8.0/ilog.odms.cplex.help/CPLEX/UsrMan/topics/cont_optim/barrier/19_tuning_title_synopsis.html
 		m = Model(solver=CplexSolver(CPXPARAM_LPMethod=4, CPXPARAM_Threads=threads, CPXPARAM_Read_Scale=1, CPXPARAM_Preprocessing_Dual=-1,
-					CPXPARAM_Barrier_ConvergeTol=1e-8,
 					CPXPARAM_Barrier_Crossover=-1, CPXPARAM_Emphasis_Numerical=1, CPXPARAM_ScreenOutput=Int(showsolverlog)))
 					# CPXPARAM_Barrier_ConvergeTol=1e-8 (default), CPXPARAM_Barrier_Display=2, CPXPARAM_Barrier_ColNonzeros=100,
-					# CPXPARAM_Barrier_Crossover=-1, CPXPARAM_Barrier_Crossover=2, CPXPARAM_Emphasis_Memory=1,
+					# CPXPARAM_Barrier_Crossover=-1 or 2, CPXPARAM_Emphasis_Memory=1,
 
 	elseif solver == :gurobi
 		m = Model(solver=GurobiSolver(Method=2, Threads=threads, NumericFocus=2, ScaleFlag=3, Crossover=0))
