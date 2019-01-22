@@ -2,7 +2,7 @@ using Plots, JLD2, FileIO
 
 plotly()
 
-function IEWruns(hourinterval)
+function IEWruns1(hourinterval)
 	results = Dict()
 	allstatus = Dict()
 	for nuc in [false, true]
@@ -71,6 +71,27 @@ function IEWruns2(hourinterval)
 	results, allstatus
 end
 
+function IEWruns3(hourinterval)
+	results = Dict()
+	allstatus = Dict()
+	for bio in [0, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3]
+		for tm in [:islands, :all]
+			for cap in [0.005, 0]
+				println("\n\n\nNew run: bio=$bio, transmission=$tm, cap=$cap.")
+				model = buildmodel(sampleinterval=hourinterval, carboncap=cap, maxbiocapacity=bio, 
+									nuclearallowed=false, transmissionallowed=tm, threads=3)
+				println("\nSolving model...")
+				status = solve(model.modelname)
+				println("\nSolve status: $status")
+				results[bio,tm,cap] = sum(getvalue(model.vars.Systemcost))
+				allstatus[bio,tm,cap] = status
+				@save "iewruns3_$(hourinterval)h.jld2" results allstatus
+			end
+		end
+	end
+	results, allstatus
+end
+
 # using JLD2, Plots; @load "iewruns1_1h.jld2" results allstatus; plotly()
 function plotiew()
 	@load "iewruns1_1h.jld2" results allstatus
@@ -124,6 +145,27 @@ function plotiew2_v2(res)
 	xticks!([1,2,3],["low","mid","high"])
 	yticks!([1,2,3],["low","mid","high"])
 	display(s)
+end
+
+function plotiew3()
+	@load "iewruns1_1h.jld2" results allstatus
+	res0 = results[true,:all,1]
+	@load "iewruns3_1h.jld2" results allstatus
+	res = results
+	carboncaps = [5; 0]
+	allbio = [0, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3]
+	res_islands = [res[bio,:islands,cap/1000]/res0 for cap in carboncaps, bio in allbio]
+	res_all = [res[bio,:all,cap/1000]/res0 for cap in carboncaps, bio in allbio]
+	# p1 = plot(string.(carboncaps), res_islands, title="islands")
+	# p2 = plot(string.(carboncaps), res_all, title="all")
+	# display(plot(p1, p2, layout=2, size=(1850,950), ylim=(0.9,2.5), label=biolabels, line=3, tickfont=16, legendfont=16,
+	# 				titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
+	biolabels_islands = ["bio=$b, islands" for i in 1:1, b in allbio]
+	biolabels_all = ["bio=$b, all" for i in 1:1, b in allbio]
+	p = plot(string.(carboncaps), res_islands, size=(650,950), ylim=(0.9,2.5), label=biolabels_islands, line=(3,:dash), tickfont=16, legendfont=16,
+					color=reshape(1:8,(1,8)), marker=:circle, titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost")
+	plot!(string.(carboncaps), res_all, color=reshape(1:8,(1,8)), marker=:circle, label=biolabels_all, line=3)
+	display(p)
 end
 
 #=
