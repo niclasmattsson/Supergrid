@@ -22,7 +22,8 @@ defaultoptions() = Dict(
 		:maxbiocapacity => 0.05,		# share of peak demand
 		:nuclearallowed => true,
 		:transmissionallowed => :all,	# :none, :islands, :all
-		:sampleinterval => 1,			# 1,2,3 or 6
+		:hours => 1,					# 1,2,3 or 6 hours per period
+		:solarwindarea => 1,			# area multiplier for GIS solar & wind potentials
 		:selectdays => 1,
 		:skipdays => 0,
 		:solver => :cplex,
@@ -56,7 +57,7 @@ function buildsetsparams(; optionlist...)
 	options = merge(defaultoptions(), optionlist)
 	hourinfo = HourSampling(options)
 	@time sets = makesets(hourinfo)
-	@time params = makeparameters(sets, hourinfo)
+	@time params = makeparameters(sets, options, hourinfo)
 	return options, hourinfo, sets, params
 end
 

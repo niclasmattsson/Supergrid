@@ -68,23 +68,23 @@ struct Constraints
 end
 
 struct HourSampling
-	sampleinterval	::Int			# unit: hours/period
+	hours			::Int			# unit: hours/period
 	selectdays		::Int
 	skipdays		::Int
-	hoursperperiod	::Float64		# not same as sampleinterval because cycles/year maybe not integer
-	hourindexes		::Vector{Int}	# select indexes before using sampleinterval to sample hours
+	hoursperperiod	::Float64		# not same as hours because cycles/year maybe not integer
+	hourindexes		::Vector{Int}	# select indexes before using hours to sample hours
 end
 
-HourSampling(options::Dict) = HourSampling(options[:sampleinterval], options[:selectdays], options[:skipdays])
+HourSampling(options::Dict) = HourSampling(options[:hours], options[:selectdays], options[:skipdays])
 
-function HourSampling(sampleinterval, selectdays, skipdays)
-	@assert sampleinterval in (1,2,3,4,6) "sampleinterval must be one of (1,2,3,4,6)"
+function HourSampling(hours, selectdays, skipdays)
+	@assert hours in (1,2,3,4,6) "hours must be one of (1,2,3,4,6)"
 	hourspercycle = (selectdays + skipdays) * 24
 	cyclesperyear = floor(8760/hourspercycle)
-	periodsperyear = cyclesperyear * hourspercycle / sampleinterval
+	periodsperyear = cyclesperyear * hourspercycle / hours
 	hoursperperiod = 8760 / periodsperyear * (1 + skipdays/selectdays)
 	hourindexes = [(c-1)*hourspercycle + h for c=1:cyclesperyear for h=1:hourspercycle if h <= selectdays*24]
-	HourSampling(sampleinterval, selectdays, skipdays, hoursperperiod, hourindexes)
+	HourSampling(hours, selectdays, skipdays, hoursperperiod, hourindexes)
 end
 
 struct ModelInfo

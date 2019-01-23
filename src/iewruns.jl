@@ -9,7 +9,7 @@ function IEWruns1(hourinterval)
 		for tm in [:none, :islands, :all]
 			for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0]
 				println("\n\n\nNew run: nuclear=$nuc, transmission=$tm, cap=$cap.")
-				model = buildmodel(sampleinterval=hourinterval, carboncap=cap, maxbiocapacity=0.05, 
+				model = buildmodel(hours=hourinterval, carboncap=cap, maxbiocapacity=0.05, 
 									nuclearallowed=nuc, transmissionallowed=tm, threads=3)
 				println("\nSolving model...")
 				status = solve(model.modelname)
@@ -29,7 +29,7 @@ function IEWruns2(hourinterval)
 	for nuc in [false]
 		for tm in [:islands, :all]
 			for cap in [0.005]
-				options, hourinfo, sets, params = buildsetsparams(sampleinterval=hourinterval, carboncap=cap, maxbiocapacity=0.05,
+				options, hourinfo, sets, params = buildsetsparams(hours=hourinterval, carboncap=cap, maxbiocapacity=0.05,
 										nuclearallowed=nuc, transmissionallowed=tm, threads=3)
 				pvcost = params.investcost[:pv,:a1]
 				pvroofcost = params.investcost[:pvroof,:a1]
@@ -78,7 +78,7 @@ function IEWruns3(hourinterval)
 		for tm in [:islands, :all]
 			for cap in [0.005, 0]
 				println("\n\n\nNew run: bio=$bio, transmission=$tm, cap=$cap.")
-				model = buildmodel(sampleinterval=hourinterval, carboncap=cap, maxbiocapacity=bio, 
+				model = buildmodel(hours=hourinterval, carboncap=cap, maxbiocapacity=bio, 
 									nuclearallowed=false, transmissionallowed=tm, threads=3)
 				println("\nSolving model...")
 				status = solve(model.modelname)

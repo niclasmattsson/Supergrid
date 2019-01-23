@@ -44,22 +44,22 @@ function makesets(REGION::Vector{Symbol}, hourinfo)
 		reservoirclass[vc] = [vc]
 	end
 
-	HOUR = 1:Int(length(hourinfo.hourindexes)/hourinfo.sampleinterval)		# later use hoursperyear() in helperfunctions
+	HOUR = 1:Int(length(hourinfo.hourindexes)/hourinfo.hours)		# later use hoursperyear() in helperfunctions
 
 	return Sets(REGION, FUEL, TECH, CLASS, STORAGECLASS, HOUR, techtype, techfuel, reservoirclass)
 end
 
 # resample hour dimension of array a (indicated by hourdim) using hourindexes in hourinfo structure,
-# then reduce hours further by sampleinterval
+# then reduce hours further by hours
 function reducehours(a, hourdim, hourinfo)
-	sampleinterval = hourinfo.sampleinterval
+	hours = hourinfo.hours
 	aa = copy(selectdim(a, hourdim, hourinfo.hourindexes))
-	out = copy(selectdim(aa, hourdim, 1:sampleinterval:size(aa,hourdim)))	# sample every nth hour
+	out = copy(selectdim(aa, hourdim, 1:hours:size(aa,hourdim)))	# sample every nth hour
 	if true		# true: averaging   false: sampling
-		for i = 2:sampleinterval
-			out += copy(selectdim(aa, hourdim, i:sampleinterval:size(aa,hourdim)))
+		for i = 2:hours
+			out += copy(selectdim(aa, hourdim, i:hours:size(aa,hourdim)))
 		end
-		out = out / sampleinterval
+		out = out / hours
 	end
 	return out
 end
