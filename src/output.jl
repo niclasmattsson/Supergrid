@@ -1,25 +1,115 @@
-using NamedArrays, StatPlots
+using NamedArrays, StatPlots, JLD2
 
 sumdimdrop(x::AbstractArray; dims) = dropdims(sum(x, dims=dims), dims=dims)
 
-function showresults(model::ModelInfo)
-	@unpack REGION, FUEL, TECH, CLASS, HOUR, techtype, STORAGECLASS = model.sets
-	@unpack demand, classlimits, hydrocapacity = model.params
-	@unpack CO2emissions, FuelUse, Electricity, Transmission, Capacity, TransmissionCapacity, Charging, StorageLevel, Systemcost = model.vars
-	@unpack ElecDemand = model.constraints
-	hoursperperiod = model.hourinfo.hoursperperiod
+# Convert a JuMPArray to an AxisArray. Uses current JuMPArray internals, will need a rewrite in the next JuMP version.
+AxisArrays.AxisArray(ja::JuMP.JuMPArray) = AxisArray(ja.innerArray, ja.indexsets...)
 
-	capacmat = [sum(getvalue(Capacity[r,k,c]) for c in CLASS[k]) for k in TECH, r in REGION]
-	capac = NamedArray([capacmat sum(capacmat, dims=2)], (TECH, [REGION; :TOTAL]))
-	elec = [sum(getvalue(Electricity[r,k,c,h]) for c in CLASS[k]) for h in HOUR, k in TECH, r in REGION]
-	annualelec = NamedArray([sumdimdrop(elec,dims=1) sumdimdrop(elec, dims=(1,3))], (TECH, [REGION; :TOTAL]), (:TECH, :REGION))
-	charge = [getvalue(Charging[r,:battery,h]) for h in HOUR, r in REGION]
+# Convert a JuMPDict to an AxisArray. Uses current JuMPDict internals, will need a rewrite in the next JuMP version.
+# function AxisArrays.AxisArray(jd::JuMP.JuMPDict)
+# 	d = jd.tupledict
+# 	k = keys(d)
+# 	ndims = length(iterate(k)[1])
+# 	sets = [unique(getindex.(k,dim)) for dim=1:ndims]
+# 	a = AxisArray(zeros(length.(sets)...), sets...)
+# 	for (key, value) in d
+# 		a[key...] = value
+# 	end
+# 	return a
+# end
+
+# Convert a JuMPDict to a Dict. Uses current JuMPDict internals, will need a rewrite in the next JuMP version.
+getdict(jd::JuMP.JuMPDict) = jd.tupledict
+
+function readresults(model::ModelInfo, status::Symbol)
+	@unpack REGION, TECH, CLASS, HOUR, techtype, STORAGECLASS = model.sets
+	@unpack Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, TransmissionCapacity, Capacity = model.vars
+	@unpack demand, classlimits, hydrocapacity = model.params
 	storagetechs = [k for k in TECH if techtype[k] == :storage]
-	existingstoragelevel = NamedArray(
-			[sum(getvalue(StorageLevel[r,k,c,h]) for c in STORAGECLASS[k]) for h in HOUR, k in storagetechs, r in REGION],
-				(collect(HOUR), storagetechs, REGION), (:HOUR, :TECH, :REGION))
-	tcapac = NamedArray([getvalue(TransmissionCapacity[r1,r2]) for r1 in REGION, r2 in REGION], (REGION,REGION))
-	#prices = [getdual(ElecDemand[r,h]) for r in REGION, h in HOUR]
+
+	params = Dict(:demand => demand, :classlimits => classlimits, :hydrocapacity => hydrocapacity)
+
+	cost = AxisArray(getvalue(Systemcost))
+	emis = AxisArray(getvalue(CO2emissions))
+	fuel = AxisArray(getvalue(FuelUse))
+	# getting Electricity for all set combos is slowest, so let's optimize storage format and use faster internal function call 
+	elec = Dict((k,c) => [JuMP._getValue(Electricity[r,k,c,h]) for h in HOUR, r in REGION] for k in TECH for c in CLASS[k]);
+	charge = getdict(getvalue(Charging))
+	# oops, StorageLevel is also slow
+	storage = Dict((k,c) => [JuMP._getValue(StorageLevel[r,k,c,h]) for h in HOUR, r in REGION] for k in storagetechs for c in STORAGECLASS[k]);
+	transmission = AxisArray(getvalue(Transmission))
+	transmissioncapac = AxisArray(getvalue(TransmissionCapacity))
+	capac = getdict(getvalue(Capacity))
+
+	return Results(status, model.options, model.hourinfo, model.sets, params, cost, emis, fuel, elec, charge, storage, transmission, transmissioncapac, capac)
+end
+
+function saveresults(results::Results, runname; filename="results.jld2", group="", compress=true)
+	if !isempty(group) && group[end] != '/'
+		group *= "/"
+	end
+	runname = "$group$runname"
+	jldopen(filename, "a+", compress=compress) do file
+		if haskey(file, runname)
+			@warn "The run $runname already exists in $filename (new run not saved to disk). "
+		else
+			file[runname] = results
+		end
+	end
+	return nothing
+end
+
+function listresults(; filename="results.jld2", group="")
+	if !isempty(group) && group[end] != '/'
+		group *= "/"
+	end
+	jldopen(filename, "r") do file
+		display(file)
+	end
+	return nothing
+end
+
+function loadresults(runname; filename="results.jld2", group="")
+	if !isempty(group) && group[end] != '/'
+		group *= "/"
+	end
+	runname = "$group$runname"
+	results = nothing
+	jldopen(filename, "r") do file
+		if haskey(file, runname)
+			results = file[runname]
+		else
+			println("\nThe run $runname does not exist in $filename.")
+		end
+	end
+	return results
+end
+
+function showresults(results::Results)
+	@unpack REGION, FUEL, TECH, CLASS, HOUR, techtype, STORAGECLASS = results.sets
+	@unpack demand, classlimits, hydrocapacity = results.params
+	@unpack CO2emissions, FuelUse, Electricity, Transmission, Capacity, TransmissionCapacity, Charging, StorageLevel, Systemcost = results
+	
+	hoursperperiod = results.hourinfo.hoursperperiod
+
+	capacmat = [sum(Capacity[r,k,c] for c in CLASS[k]) for k in TECH, r in REGION]
+	capac = NamedArray([capacmat sum(capacmat, dims=2)], (TECH, [REGION; :TOTAL]))
+	elec = zeros(length(HOUR), length(TECH), length(REGION))
+	for (i,k) in enumerate(TECH)
+		elec[:,i,:] = sum(Electricity[k,c] for c in CLASS[k])
+	end
+	annualelec = NamedArray([sumdimdrop(elec,dims=1) sumdimdrop(elec, dims=(1,3))], (TECH, [REGION; :TOTAL]), (:TECH, :REGION))
+	charge = [Charging[r,:battery,h] for h in HOUR, r in REGION]
+	storagetechs = [k for k in TECH if techtype[k] == :storage]
+	storage = zeros(length(HOUR), length(storagetechs), length(REGION))
+	for (i,k) in enumerate(storagetechs)
+		storage[:,i,:] = sum(StorageLevel[k,c] for c in STORAGECLASS[k])
+	end
+	existingstoragelevel = NamedArray(storage, (collect(HOUR), storagetechs, REGION), (:HOUR, :TECH, :REGION))
+	tcapac = NamedArray([TransmissionCapacity[r1,r2] for r1 in REGION, r2 in REGION], (REGION,REGION))
+
+	# @unpack ElecDemand = model.constraints
+	# prices = [getdual(ElecDemand[r,h]) for r in REGION, h in HOUR]
 	# prices = NamedArray([getdual(ElecDemand[r,h]) for r in REGION, h in HOUR], (REGION, collect(HOUR)))		# €/kWh
 
 	plotly()
@@ -48,8 +138,8 @@ function showresults(model::ModelInfo)
 
 	function chart(country::Symbol, plotstoragetech=:none)
 		if country == :BARS
-			regcost = [getvalue(Systemcost[r]) for r in REGION] ./ vec(sum(annualelec, dims=1)[1:end-1]) * 1000
-			totcost = sum(getvalue(Systemcost)) / sum(annualelec[:,:TOTAL]) * 1000
+			regcost = Systemcost ./ vec(sum(annualelec, dims=1)[1:end-1]) * 1000
+			totcost = sum(Systemcost) / sum(annualelec[:,:TOTAL]) * 1000
 			lcoe = NamedArray(collect([regcost; totcost]'), (["system cost (€/MWh)"], [REGION; :TOTAL]))
 			display(lcoe)
 
@@ -57,8 +147,12 @@ function showresults(model::ModelInfo)
 			lr = length(REGION)
 			xpos = (1:lr)' .- 0.5
 			display(plot!([xpos; xpos], [zeros(lr)'; sum(demand,dims=2)'*hoursperperiod/1000], line=3, color=:black, labels=permutedims(repeat([""],lr))))
-			totelec = [sumdimdrop(annualelec[:,1:8],dims=2) sumdimdrop(annualelec[:,9:15],dims=2) sumdimdrop(annualelec[:,16:21],dims=2) annualelec[:,:TOTAL]]
-			display(groupedbar(["EU","CAS","China","TOTAL"],collect(totelec[displayorder,:]'/1e6), labels=techlabels, bar_position = :stack, size=(500,950), line=0, tickfont=14, legendfont=14, color_palette=palette))
+			if lr == 21
+				totelec = [sumdimdrop(annualelec[:,1:8],dims=2) sumdimdrop(annualelec[:,9:15],dims=2) sumdimdrop(annualelec[:,16:21],dims=2) annualelec[:,:TOTAL]]
+				display(groupedbar(["EU","CAS","China","TOTAL"],collect(totelec[displayorder,:]'/1e6), labels=techlabels, bar_position = :stack, size=(500,950), line=0, tickfont=14, legendfont=14, color_palette=palette))
+			else
+				display(groupedbar(["TOTAL"],collect(annualelec[displayorder,:TOTAL]')/1e6, labels=techlabels, bar_position = :stack, size=(500,950), line=0, tickfont=14, legendfont=14, color_palette=palette))				
+			end
 			return nothing
 		end
 
@@ -83,7 +177,7 @@ function showresults(model::ModelInfo)
 		composite = plot(layout = 6, size=(1850,950), legend=false)
 		for (i,k) in enumerate([:wind, :offwind, :hydro, :pv, :pvroof, :csp])
 			colors = [palette[findfirst(displaytechs .== k)]; RGB(0.9,0.9,0.9)]
-			used = [sum(getvalue(Capacity[r,k,c]) for r in REGION[regs]) for c in CLASS[k]]
+			used = [sum(Capacity[r,k,c] for r in REGION[regs]) for c in CLASS[k]]
 			lims = [sum(k == :hydro ? hydrocapacity[r,c] : classlimits[r,k,c] for r in REGION[regs]) for c in CLASS[k]]
 			groupedbar!(String.(CLASS[k]), [used lims-used], subplot=i, bar_position = :stack, line=0, color_palette=colors)
 		end
@@ -94,7 +188,7 @@ function showresults(model::ModelInfo)
 			p = plot(regstorage, size=(1850,950), tickfont=16, legendfont=16, label="storage level (TWh)")
 			if plotstoragetech == :battery
 				plot!(regcharge/1000, label="charge (TWh/h)")
-				batteryelec = sumdimdrop([getvalue(Electricity[r,:battery,:_,h]) for r in REGION, h in HOUR][regs,:], dims=1) / hoursperperiod
+				batteryelec = sumdimdrop([Electricity[:battery,:_][r,h] for r in REGION, h in HOUR][regs,:], dims=1) / hoursperperiod
 				plot!(batteryelec/1000, label="discharge (TWh/h)")
 			end
 			display(p)
@@ -139,4 +233,23 @@ get_color_palette(:auto, default(:bgcolor), 13)
  RGBA{Float64}(5.94762e-7,0.660879,0.798179,1.0)
  RGBA{Float64}(0.609671,0.499185,0.911781,1.0)
  RGBA{Float64}(0.380002,0.551053,0.966506,1.0)
+
+
+
+function test()
+_Systemcost = AxisArray(getvalue(m.vars.Systemcost))
+_CO2emissions = AxisArray(getvalue(m.vars.CO2emissions))
+_FuelUse = AxisArray(getvalue(m.vars.FuelUse))
+_Electricity = Supergrid.getdict(getvalue(m.vars.Electricity))
+_Charging = Supergrid.getdict(getvalue(m.vars.Charging))
+_StorageLevel = Supergrid.getdict(getvalue(m.vars.StorageLevel))
+_Transmission = AxisArray(getvalue(m.vars.Transmission))
+_TransmissionCapacity = AxisArray(getvalue(m.vars.TransmissionCapacity))
+_Capacity = Supergrid.getdict(getvalue(m.vars.Capacity))
+end
+
+@time elec = [sum(getvalue(m.vars.Electricity[r,k,c,h]) for c in CLASS[k]) for h in HOUR, k in TECH, r in REGION];
+
+@time elec = Dict(getvalue(m.vars.Electricity[r,k,c,h]) for r in REGION, k in TECH, c in CLASS[k], h in HOUR);
+@time elec = Dict((k,c) => [JuMP._getValue(m.vars.Electricity[r,k,c,h]) for r in REGION, h in HOUR] for k in TECH for c in CLASS[k]);
 =#

@@ -6,7 +6,7 @@ function makesets(hourinfo)
 	path = joinpath(dirname(@__FILE__), "..")
 	distancevars = matread("$path/inputdata/distances_Europe8.mat")
 	regionlist = Symbol.(vec(distancevars["regionlist"]))
-	# regionlist = regionlist[1:4]
+	regionlist = regionlist[1:3]
 	makesets(regionlist, hourinfo)
 end
 

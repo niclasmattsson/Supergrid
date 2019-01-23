@@ -94,4 +94,22 @@ struct ModelInfo
 	vars		::Vars
 	constraints	::Constraints
 	hourinfo	::HourSampling
+	options		::Dict{Symbol,Any}
+end
+
+struct Results
+	Status						::Symbol
+	options						::Dict{Symbol,Any}
+	hourinfo					::HourSampling
+	sets						::Sets
+	params						::Dict{Symbol,Any}
+	Systemcost					::AxisArray{Float64,1}
+	CO2emissions				::AxisArray{Float64,1}
+	FuelUse						::AxisArray{Float64,2}
+	Electricity					::Dict{Tuple{Symbol,Symbol}, Array{Float64,2}}
+	Charging					::Dict{Tuple{Symbol,Symbol,Int}, Float64}
+	StorageLevel				::Dict{Tuple{Symbol,Symbol}, Array{Float64,2}}
+	Transmission				::AxisArray{Float64,3}
+	TransmissionCapacity		::AxisArray{Float64,2}
+	Capacity					::Dict{Tuple{Symbol,Symbol,Symbol}, Float64}
 end
