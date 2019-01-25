@@ -149,9 +149,15 @@ function showresults(results::Results)
 			display(plot!([xpos; xpos], [zeros(lr)'; sum(demand,dims=2)'*hoursperperiod/1000], line=3, color=:black, labels=permutedims(repeat([""],lr))))
 			if lr == 21
 				totelec = [sumdimdrop(annualelec[:,1:8],dims=2) sumdimdrop(annualelec[:,9:15],dims=2) sumdimdrop(annualelec[:,16:21],dims=2) annualelec[:,:TOTAL]]
-				display(groupedbar(["EU","CAS","China","TOTAL"],collect(totelec[displayorder,:]'/1e6), labels=techlabels, bar_position = :stack, size=(500,950), line=0, tickfont=14, legendfont=14, color_palette=palette))
+				groupedbar(["EU","CAS","China","TOTAL"],collect(totelec[displayorder,:]'/1e6), labels=techlabels, bar_position = :stack, size=(500,950), line=0, tickfont=14, legendfont=14, color_palette=palette)
+				xpos = (1:4)' .- 0.5
+				totdemand = [sum(demand[1:8,:]) sum(demand[9:15,:]) sum(demand[16:21,:]) sum(demand)]
+				display(plot!([xpos; xpos], [zeros(4)'; totdemand*hoursperperiod/1e6], line=3, color=:black, labels=permutedims(repeat([""],4))))
 			else
-				display(groupedbar(["TOTAL"],collect(annualelec[displayorder,:TOTAL]')/1e6, labels=techlabels, bar_position = :stack, size=(500,950), line=0, tickfont=14, legendfont=14, color_palette=palette))				
+				groupedbar(["TOTAL"],collect(annualelec[displayorder,:TOTAL]')/1e6, labels=techlabels, bar_position = :stack, size=(500,950), line=0, tickfont=14, legendfont=14, color_palette=palette)
+				xpos = (1:1)' .- 0.5
+				totdemand = [sum(demand)]
+				display(plot!([xpos; xpos], [zeros(1)'; totdemand*hoursperperiod/1e6], line=3, color=:black, labels=permutedims(repeat([""],1))))
 			end
 			return nothing
 		end
