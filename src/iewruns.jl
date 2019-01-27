@@ -10,22 +10,22 @@ function IEWruns1(hourinterval)
 		for solarwind in [1, 4]
 			for tm in [:none, :islands, :all]
 				for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0]
-					runcount += 1
-					runcount in [1] && continue
+					# runcount += 1
+					# runcount in [1] && continue
 					println("\n\n\nNew run: nuclear=$nuc, solarwind=$solarwind, transmission=$tm, cap=$cap.")
 					model = buildmodel(hours=hourinterval, carboncap=cap, maxbiocapacity=0.05, 
-										nuclearallowed=nuc, transmissionallowed=tm, solarwindarea=solarwind)
+										nuclearallowed=nuc, hydroinvestmentsallowed=true, transmissionallowed=tm, solarwindarea=solarwind)
 					println("\nSolving model...")
 					status = solve(model.modelname)
 					println("\nSolve status: $status")
 					resultslist[nuc,solarwind,tm,cap] = sum(getvalue(model.vars.Systemcost))
 					allstatus[nuc,solarwind,tm,cap] = status
-					@save "iewcosts1.jld2" resultslist allstatus
+					@save "iewcosts1_hydro.jld2" resultslist allstatus
 					println("\nReading results...")
 					results = readresults(model, status)
 					name = autorunname(model.options)
 					println("\nSaving results to disk...")
-					saveresults(results, name, filename="iewruns1.jld2")
+					saveresults(results, name, filename="iewruns1_hydro.jld2")
 				end
 			end
 		end
@@ -34,51 +34,58 @@ function IEWruns1(hourinterval)
 end
 
 function IEWruns2(hourinterval)
-	results = Dict()
+	resultslist = Dict()
 	allstatus = Dict()
 	for nuc in [false]
-		for tm in [:islands, :all]
-			for cap in [0.005]
-				options, hourinfo, sets, params = buildsetsparams(hours=hourinterval, carboncap=cap, maxbiocapacity=0.05,
-										nuclearallowed=nuc, transmissionallowed=tm)
-				pvcost = params.investcost[:pv,:a1]
-				pvroofcost = params.investcost[:pvroof,:a1]
-				batterycost = params.investcost[:battery,:_]
-				for solar in [:high, :mid, :low]
-					for battery in [:high, :mid, :low]
-						println("\n\n\nNew run: nuclear=$nuc, transmission=$tm, cap=$cap, solar=$solar, battery=$battery.")
-						for c in sets.CLASS[:pv]
-							if solar == :high
-								params.investcost[:pv,c] = pvcost * 1.5
-								params.investcost[:pvroof,c] = pvroofcost + pvcost * 0.5
-							elseif solar == :mid
-								params.investcost[:pv,c] = pvcost
-								params.investcost[:pvroof,c] = pvroofcost
-							elseif solar == :low
-								params.investcost[:pv,c] = pvcost * 0.5
-								params.investcost[:pvroof,c] = pvroofcost - pvcost * 0.5
+		for solarwind in [4]
+			for tm in [:islands, :all]
+				for cap in [0.001]
+					options, hourinfo, sets, params = buildsetsparams(hours=hourinterval, carboncap=cap, maxbiocapacity=0.05,
+											solarwindarea=solarwind, nuclearallowed=nuc, transmissionallowed=tm)
+					pvcost = params.investcost[:pv,:a1]
+					pvroofcost = params.investcost[:pvroof,:a1]
+					batterycost = params.investcost[:battery,:_]
+					for solar in [:high, :mid, :low]
+						for battery in [:high, :mid, :low]
+							println("\n\n\nNew run: nuclear=$nuc, solarwind=$solarwind, transmission=$tm, cap=$cap, solar=$solar, battery=$battery.")
+							for c in sets.CLASS[:pv]
+								if solar == :high
+									params.investcost[:pv,c] = pvcost * 1.5
+									params.investcost[:pvroof,c] = pvroofcost + pvcost * 0.5
+								elseif solar == :mid
+									params.investcost[:pv,c] = pvcost
+									params.investcost[:pvroof,c] = pvroofcost
+								elseif solar == :low
+									params.investcost[:pv,c] = pvcost * 0.5
+									params.investcost[:pvroof,c] = pvroofcost - pvcost * 0.5
+								end
 							end
+							if battery == :high
+								params.investcost[:battery,:_] = batterycost * 1.5
+							elseif battery == :mid
+								params.investcost[:battery,:_] = batterycost
+							elseif battery == :low
+								params.investcost[:battery,:_] = batterycost * 0.5
+							end
+							model = buildvarsmodel(options, hourinfo, sets, params)
+							println("\nSolving model...")
+							status = solve(model.modelname)
+							println("\nSolve status: $status")
+							resultslist[solarwind,tm,cap,solar,battery] = sum(getvalue(model.vars.Systemcost))
+							allstatus[solarwind,tm,cap,solar,battery] = status
+							@save "iewcosts2.jld2" resultslist allstatus
+							println("\nReading results...")
+							results = readresults(model, status)
+							name = autorunname(model.options) * ", solarwind=$solarwind, solar=$solar, battery=$battery"
+							println("\nSaving results to disk...")
+							saveresults(results, name, filename="iewruns2.jld2")
 						end
-						if battery == :high
-							params.investcost[:battery,:_] = batterycost * 1.5
-						elseif battery == :mid
-							params.investcost[:battery,:_] = batterycost
-						elseif battery == :low
-							params.investcost[:battery,:_] = batterycost * 0.5
-						end
-						model = buildvarsmodel(options, hourinfo, sets, params)
-						println("\nSolving model...")
-						status = solve(model.modelname)
-						println("\nSolve status: $status")
-						results[nuc,tm,cap,solar,battery] = status == :Optimal ? sum(getvalue(model.vars.Systemcost)) : NaN
-						allstatus[nuc,tm,cap,solar,battery] = status
-						@save "iewruns2_$(hourinterval)h.jld2" results allstatus
 					end
 				end
 			end
 		end
 	end
-	results, allstatus
+	resultslist, allstatus
 end
 
 function IEWruns3(hourinterval)
@@ -103,12 +110,19 @@ function IEWruns3(hourinterval)
 end
 
 function mergeresults()
-	@load "iewcosts1_0.jld2" resultslist allstatus
-	res0, st0 = resultslist, allstatus
-	@load "iewcosts1.jld2" resultslist allstatus
-	resultslist[false, 1, :none, 1.0] = res0[false, 1, :none, 1.0] 
-	allstatus[false, 1, :none, 1.0] = st0[false, 1, :none, 1.0] 
-	@save "iewcosts1.jld2" resultslist allstatus
+	# @load "iewcosts1_0.jld2" resultslist allstatus
+	# res0, st0 = resultslist, allstatus
+	# @load "iewcosts1.jld2" resultslist allstatus
+	# resultslist[false, 1, :none, 1.0] = res0[false, 1, :none, 1.0] 
+	# allstatus[false, 1, :none, 1.0] = st0[false, 1, :none, 1.0] 
+	# @save "iewcosts1.jld2" resultslist allstatus
+	@load "iewcosts2 - part1.jld2" resultslist allstatus
+	res1, st1 = resultslist, allstatus
+	@load "iewcosts2 - part2.jld2" resultslist allstatus
+	res2, st2 = resultslist, allstatus
+	resultslist = merge(res1, res2)
+	allstatus = merge(st1, st2)
+	@save "iewcosts2.jld2" resultslist allstatus
 end
 
 function plotiew_lines_v2()
@@ -128,13 +142,12 @@ function plotiew_lines_v2()
 	resmat2 = [getresults(false,1,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
 	resmat3 = [getresults(true,4,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
 	resmat4 = [getresults(false,4,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
-	display(resmat2)
 	p1 = plot(string.(carboncaps), resmat1, title="nuclear, default solar & wind area")
 	p2 = plot(string.(carboncaps), resmat2, title="no nuclear, default solar & wind area")
 	p3 = plot(string.(carboncaps), resmat3, title="nuclear, high solar & wind area")
 	p4 = plot(string.(carboncaps), resmat4, title="no nuclear, high solar & wind area")
 	display(plot(p2, p4, layout=2, size=(1850,950), ylim=(0.9,2.5), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
-					titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
+					titlefont=20, guidefont=16, xlabel="Global CO2 constraint [g CO2/kWh]", ylabel="relative cost"))
 	# display(plot(p3, p4, layout=2, size=(1850,950), ylim=(0.9,2.5), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
 	# 				titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
 end
@@ -158,7 +171,7 @@ function plotiew_bubbles_v1()
 	res = results
 	rows = [3 3 3 2 2 2 1 1 1]
 	cols = [3 2 1 3 2 1 3 2 1]
-	r = [(res[false,:islands,0.005,solar,battery]-res[false,:all,0.005,solar,battery])/res[false,:all,0.005,:low,:low] for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
+	r = [(res[false,:islands,0.005,solar,battery]-res[false,:all,0.005,solar,battery])/res[false,:all,0.005,solar,battery] for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
 	annotations = [(rows[i]-0.17*r[i]/0.06, cols[i], text("$(round(r[i]*100, digits=1))%", :right)) for i=1:9]
 	s = scatter(rows, cols, markersize=reshape(r*500, (1,9)), annotations=annotations, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
 					title="System cost diff: islands - all (no nuclear)", xlabel="battery cost", ylabel="solar PV cost",
@@ -166,6 +179,28 @@ function plotiew_bubbles_v1()
 	xticks!([1,2,3],["low","mid","high"])
 	yticks!([1,2,3],["low","mid","high"])
 	display(s)
+end
+
+function plotiew_bubbles_v2()
+	@load "iewcosts2.jld2" resultslist allstatus
+	res = resultslist
+	rows = [3 3 3 2 2 2 1 1 1]
+	cols = [3 2 1 3 2 1 3 2 1]
+	r1 = [(res[1,:islands,0.001,solar,battery]-res[1,:all,0.001,solar,battery])/res[1,:all,0.001,solar,battery] for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
+	r2 = [(res[4,:islands,0.001,solar,battery]-res[4,:all,0.001,solar,battery])/res[4,:all,0.001,solar,battery] for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
+	annotations1 = [(rows[i]-0.17*r1[i]/0.06, cols[i], text("$(round(r1[i]*100, digits=1))%", :right)) for i=1:9]
+	annotations2 = [(rows[i]-0.17*r2[i]/0.06, cols[i], text("$(round(r2[i]*100, digits=1))%", :right)) for i=1:9]
+	s1 = scatter(rows, cols, markersize=reshape(r1*500, (1,9)), annotations=annotations1, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
+					title="System cost diff: islands - all (default solar/wind area)", xlabel="battery cost", ylabel="solar PV cost",
+					tickfont=12, guidefont=12)
+	xticks!([1,2,3],["low","mid","high"])
+	yticks!([1,2,3],["low","mid","high"])
+	s2 = scatter(rows, cols, markersize=reshape(r2*500, (1,9)), annotations=annotations2, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
+					title="System cost diff: islands - all (high solar/wind area)", xlabel="battery cost", ylabel="solar PV cost",
+					tickfont=12, guidefont=12)
+	xticks!([1,2,3],["low","mid","high"])
+	yticks!([1,2,3],["low","mid","high"])
+	display(plot(s1, s2, layout=2, size=(1350,650)))
 end
 
 function plotiew_biolines_v1()
