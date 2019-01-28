@@ -152,6 +152,29 @@ function plotiew_lines_v2()
 	# 				titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
 end
 
+function plotiew_lines_hydro()
+	@load "iewcosts1.jld2" resultslist allstatus
+	res = resultslist
+	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
+	res0 = get(res,(true,1,:all,1),0)
+	if res0 == 0
+		res0 = get(res,(false,1,:all,1),0)
+		res0 == 0 && error("No results for base case!")
+	end
+	@load "iewcosts1_hydro.jld2" resultslist allstatus
+	resh = resultslist
+	function getresults(res,a,b,c,d)
+		out = get(res,(a,b,c,d),NaN)
+		return out > 1e7 ? NaN : out/res0
+	end
+	resmat1 = [getresults(res,false,1,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
+	resmat2 = [getresults(resh,false,1,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
+	p1 = plot(string.(carboncaps), resmat1, title="no nuclear, existing hydro")
+	p2 = plot(string.(carboncaps), resmat2, title="no nuclear, existing hydro + investments")
+	display(plot(p1, p2, layout=2, size=(1850,950), ylim=(0.9,2.5), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
+					titlefont=20, guidefont=16, xlabel="Global CO2 constraint [g CO2/kWh]", ylabel="relative cost"))
+end
+
 # using JLD2, Plots; @load "iewruns1_1h.jld2" results allstatus; plotly()
 function plotiew_lines_v1()
 	@load "iewruns1_1h.jld2" results allstatus
