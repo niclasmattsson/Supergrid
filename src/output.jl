@@ -69,7 +69,12 @@ function listresults(; filename="results.jld2", group="")
 	return nothing
 end
 
-function loadresults(runname; filename="results.jld2", group="")
+function loadresults(; filename="results.jld2", group="", loadoptions...)
+	options = merge(defaultoptions(), loadoptions)
+	loadresults(autorunname(options); filename=filename, group=group)
+end
+
+function loadresults(runname::String; filename="results.jld2", group="")
 	if !isempty(group) && group[end] != '/'
 		group *= "/"
 	end
