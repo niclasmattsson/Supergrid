@@ -126,6 +126,7 @@ function mergeresults()
 end
 
 function plotiew_lines_v2()
+	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", filename="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewcosts1.jld2" resultslist allstatus
 	res = resultslist
 	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
@@ -135,8 +136,8 @@ function plotiew_lines_v2()
 		res0 == 0 && error("No results for base case!")
 	end
 	function getresults(a,b,c,d)
-		out = get(res,(a,b,c,d),NaN)
-		return out > 1e7 ? NaN : out/res0
+		cost = get(res,(a,b,c,d),NaN)						# M€/year
+		return cost > 1e7 ? NaN : cost/totaldemand*1000		# €/MWh
 	end
 	resmat1 = [getresults(true,1,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
 	resmat2 = [getresults(false,1,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
@@ -146,8 +147,8 @@ function plotiew_lines_v2()
 	p2 = plot(string.(carboncaps), resmat2, title="no nuclear, default solar & wind area")
 	p3 = plot(string.(carboncaps), resmat3, title="nuclear, high solar & wind area")
 	p4 = plot(string.(carboncaps), resmat4, title="no nuclear, high solar & wind area")
-	display(plot(p2, p4, layout=2, size=(1850,950), ylim=(0.9,2.5), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
-					titlefont=20, guidefont=16, xlabel="Global CO2 constraint [g CO2/kWh]", ylabel="relative cost"))
+	display(plot(p2, p4, layout=2, size=(1850,950), ylim=(0,120), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
+					titlefont=20, guidefont=16, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]"))
 	# display(plot(p3, p4, layout=2, size=(1850,950), ylim=(0.9,2.5), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
 	# 				titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
 end
@@ -177,16 +178,17 @@ end
 
 # using JLD2, Plots; @load "iewruns1_1h.jld2" results allstatus; plotly()
 function plotiew_lines_v1()
+	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", filename="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewruns1_1h.jld2" results allstatus
 	res = results
 	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
 	res0 = res[true,:all,1]
-	resmat1 = [res[true,tm,cap/1000]/res0 for cap in carboncaps, tm in [:none, :islands, :all]]
-	resmat2 = [res[false,tm,cap/1000]/res0 for cap in carboncaps, tm in [:none, :islands, :all]]
+	resmat1 = [res[true,tm,cap/1000]/totaldemand*1000 for cap in carboncaps, tm in [:none, :islands, :all]]
+	resmat2 = [res[false,tm,cap/1000]/totaldemand*1000 for cap in carboncaps, tm in [:none, :islands, :all]]
 	p1 = plot(string.(carboncaps), resmat1, title="nuclear")
 	p2 = plot(string.(carboncaps), resmat2, title="no nuclear")
-	display(plot(p1, p2, layout=2, size=(1850,950), ylim=(0.9,2.5), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
-					titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
+	display(plot(p1, p2, layout=2, size=(1850,950), ylim=(0,120), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
+					titlefont=20, guidefont=16, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]"))
 end
 
 function plotiew_bubbles_v1()
@@ -220,6 +222,29 @@ function plotiew_bubbles_v2()
 	yticks!([1,2,3],["low","mid","high"])
 	s2 = scatter(rows, cols, markersize=reshape(r2*500, (1,9)), annotations=annotations2, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
 					title="System cost diff: islands - all (high solar/wind area)", xlabel="battery cost", ylabel="solar PV cost",
+					tickfont=12, guidefont=12)
+	xticks!([1,2,3],["low","mid","high"])
+	yticks!([1,2,3],["low","mid","high"])
+	display(plot(s1, s2, layout=2, size=(1350,650)))
+end
+
+function plotiew_bubbles_v2_abs()
+	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", filename="iewruns1.jld2");  sum(r.params[:demand])
+	@load "iewcosts2.jld2" resultslist allstatus
+	res = resultslist
+	rows = [3 3 3 2 2 2 1 1 1]
+	cols = [3 2 1 3 2 1 3 2 1]
+	r1 = [(res[1,:islands,0.001,solar,battery]-res[1,:all,0.001,solar,battery])/totaldemand*1000 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
+	r2 = [(res[4,:islands,0.001,solar,battery]-res[4,:all,0.001,solar,battery])/totaldemand*1000 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
+	annotations1 = [(rows[i]-0.06*r1[i], cols[i], text("$(round(r1[i], digits=1))", :right)) for i=1:9]
+	annotations2 = [(rows[i]-0.06*r2[i], cols[i], text("$(round(r2[i], digits=1))", :right)) for i=1:9]
+	s1 = scatter(rows, cols, markersize=reshape(r1*10, (1,9)), annotations=annotations1, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
+					title="System cost diff [€/MWh]: islands - all (default solar/wind area)", xlabel="battery cost", ylabel="solar PV cost",
+					tickfont=12, guidefont=12)
+	xticks!([1,2,3],["low","mid","high"])
+	yticks!([1,2,3],["low","mid","high"])
+	s2 = scatter(rows, cols, markersize=reshape(r2*10, (1,9)), annotations=annotations2, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
+					title="System cost diff [€/MWh]: islands - all (high solar/wind area)", xlabel="battery cost", ylabel="solar PV cost",
 					tickfont=12, guidefont=12)
 	xticks!([1,2,3],["low","mid","high"])
 	yticks!([1,2,3],["low","mid","high"])
