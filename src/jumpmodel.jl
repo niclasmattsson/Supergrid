@@ -80,7 +80,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 			transmissioninvestcost, transmissionfixedcost, hydroeleccost = params
 	@unpack Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, TransmissionCapacity, Capacity = vars
 	@unpack hoursperperiod = hourinfo
-	@unpack carbontax, carboncap, rampingconstraints, maxbiocapacity = options
+	@unpack carbontax, carboncap, rampingconstraints, maxbiocapacity, globalnuclearlimit = options
 
 	maxdemand = dropdims(maximum(demand, dims=2), dims=2)
 
@@ -170,6 +170,13 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 		end
 	else
 		RampingDown = RampingUp = nothing
+	end
+
+	if globalnuclearlimit != Inf
+		@constraints m begin
+			NuclearCapacityLimit,
+				sum(Capacity[r,:nuclear,:_] for r in REGION) <= globalnuclearlimit
+		end
 	end
 
 	return Constraints(ElecCapacity, ElecDemand, RampingDown, RampingUp, StorageBalance, MaxStorageCapacity, InitialStorageLevel,
