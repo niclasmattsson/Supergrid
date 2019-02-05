@@ -191,6 +191,134 @@ function plotiew_lines_v1()
 					titlefont=20, guidefont=16, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]"))
 end
 
+function plotiew_lines1_paper()
+	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", filename="iewruns1.jld2");  sum(r.params[:demand])
+	@load "iewruns1_1h.jld2" results allstatus
+	res = results
+	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
+	res0 = res[true,:all,1]
+	resmat1 = [res[true,tm,cap/1000]/totaldemand*1000 for cap in carboncaps, tm in [:islands, :all]]
+	resmat2 = [res[false,tm,cap/1000]/totaldemand*1000 for cap in carboncaps, tm in [:islands, :all]]
+	carboncaps[1] = "none"
+	display([resmat2 resmat1])
+	p = plot(string.(carboncaps), [resmat2 resmat1], color=[1 2 1 2], line=[:solid :solid :dash :dash])
+	display(plot(p, size=(1000,450), ylim=(0,70), 
+					label=["Is-lowL - no nuclear" "Sup-lowL - no nuclear" "Is-lowL - unlimited nuclear" "Sup-lowL - unlimited nuclear"],
+					line=3, tickfont=14, legendfont=14,
+					titlefont=16, guidefont=14, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]",
+					left_margin=50px, gridlinewidth=1))
+end
+
+function plotiew_lines2_paper()
+	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", filename="iewruns1.jld2");  sum(r.params[:demand])
+	@load "iewcosts1.jld2" resultslist allstatus
+	res = resultslist
+	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
+	res0 = get(res,(true,1,:all,1),0)
+	if res0 == 0
+		res0 = get(res,(false,1,:all,1),0)
+		res0 == 0 && error("No results for base case!")
+	end
+	function getresults(a,b,c,d)
+		cost = get(res,(a,b,c,d),NaN)						# M€/year
+		return cost > 1e7 ? NaN : cost/totaldemand*1000		# €/MWh
+	end
+	resmat1 = [getresults(true,1,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
+	resmat2 = [getresults(false,1,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
+	resmat3 = [getresults(true,4,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
+	resmat4 = [getresults(false,4,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
+	carboncaps[1] = "none"
+	p1 = plot(string.(carboncaps), resmat1, title="Unlimited nuclear, default solar & wind area")
+	p2 = plot(string.(carboncaps), resmat2, title="Low solar & wind area", label=["" ""])
+	p3 = plot(string.(carboncaps), resmat3, title="Unlimited nuclear, high solar & wind area")
+	p4 = plot(string.(carboncaps), resmat4, title="High solar & wind area", label=[:islands :all])
+
+	p = plot(string.(carboncaps), [resmat2 resmat4], color=[1 2 1 2], line=[:solid :solid :dash :dash])
+	display(plot(p, size=(850,450), ylim=(0,70), 
+					label=["Is-lowL" "Sup-lowL" "Is-highL" "Sup-highL"],
+					line=3, tickfont=14, legendfont=14,
+					titlefont=16, guidefont=14, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]",
+					left_margin=50px, gridlinewidth=1))
+	# p1 = plot(string.(carboncaps), resmat1, title="Unlimited nuclear, default solar & wind area")
+	# p2 = plot(string.(carboncaps), resmat2, title="Low solar & wind area", label=["" ""])
+	# p3 = plot(string.(carboncaps), resmat3, title="Unlimited nuclear, high solar & wind area")
+	# p4 = plot(string.(carboncaps), resmat4, title="High solar & wind area", label=[:islands :all])
+	# display(plot(p2, p4, layout=2, size=(1000,450), ylim=(0,70), line=3, tickfont=14, legendfont=14,
+	# 				titlefont=16, guidefont=14, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]",
+	# 				left_margin=50px, gridlinewidth=1))
+	# display(plot(p3, p4, layout=2, size=(1850,950), ylim=(0.9,2.5), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
+	# 				titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
+end
+
+function plotiew_bubbles_paper()
+	@load "iewcosts2.jld2" resultslist allstatus
+	res = resultslist
+	rows = [3 3 3 2 2 2 1 1 1]
+	cols = [3 2 1 3 2 1 3 2 1]
+	r1 = [(res[1,:islands,0.001,solar,battery]-res[1,:all,0.001,solar,battery])/res[1,:all,0.001,solar,battery] for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
+	r2 = [(res[4,:islands,0.001,solar,battery]-res[4,:all,0.001,solar,battery])/res[4,:all,0.001,solar,battery] for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
+	annotations1 = [(rows[i]-0.17*r1[i]/0.06, cols[i], text("$(round(r1[i]*100, digits=1))%", :right)) for i=1:9]
+	annotations2 = [(rows[i]-0.17*r2[i]/0.06, cols[i], text("$(round(r2[i]*100, digits=1))%", :right)) for i=1:9]
+	s1 = scatter(rows, cols, markersize=reshape(r1*400, (1,9)), annotations=annotations1, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
+					title="Low solar & wind area", xlabel="battery cost", ylabel="solar PV cost", color=1,
+					tickfont=14, guidefont=14)
+	xticks!([1,2,3],["low","mid","high"])
+	yticks!([1,2,3],["low","mid","high"])
+	s2 = scatter(rows, cols, markersize=reshape(r2*400, (1,9)), annotations=annotations2, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
+					title="High solar & wind area", xlabel="battery cost", ylabel="solar PV cost", color=1,
+					tickfont=14, guidefont=14, left_margin=20px)
+	xticks!([1,2,3],["low","mid","high"])
+	yticks!([1,2,3],["low","mid","high"])
+	display(plot(s1, s2, layout=2, size=(1000,450)))
+end
+
+function plotiew_energymix(scenelec, demands, hoursperperiod, displayorder, techlabels)
+	scen = ["Is-lowL", "Sup-lowL", "Is-highL", "Sup-highL"]
+	resultsnames = ["transmissionallowed=islands, nuclearallowed=false, carboncap=0.001",
+					"nuclearallowed=false, carboncap=0.001",
+					"transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, solarwindarea=4",
+					"nuclearallowed=false, carboncap=0.001, solarwindarea=4"]
+	
+	# scenelec, demands, hoursperperiod, displayorder, techlabels = getscenresults(scen, resultsnames)
+
+	palette = [RGB([216,137,255]/255...), RGB([119,112,71]/255...), RGB([199,218,241]/255...), RGB([149,179,215]/255...),
+		RGB([255,255,64]/255...), RGB([240,224,0]/255...), RGB([214,64,64]/255...), RGB([255,192,0]/255...), RGB([99,172,70]/255...),
+		RGB([100,136,209]/255...), RGB([144,213,93]/255...), RGB([148,138,84]/255...), RGB([157,87,205]/255...)]
+	groupedbarflip(collect(scenelec[displayorder,:]')/1e6, label=techlabels, bar_position = :stack, size=(600,550),
+			left_margin=20px, xticks=(1:4,scen), line=0, tickfont=12, legendfont=12, guidefont=12, color_palette=palette, ylabel="[PWh/year]")
+	xpos = (1:4)'
+	display(plot!([xpos; xpos], [zeros(4)'; demands'*hoursperperiod/1e6], line=3, color=:black, label=["demand" "" "" ""]))
+	nothing
+end
+
+function readscenariodata(resultname)
+	results = loadresults(resultname, filename="iewruns1.jld2")
+	@unpack TECH, REGION, CLASS, HOUR = results.sets
+	hoursperperiod = results.hourinfo.hoursperperiod
+	totaldemand = sum(results.params[:demand])
+	totalelec = [sum(sum(results.Electricity[k,c]) for c in CLASS[k]) for k in TECH]
+
+	displaytechs = [:nuclear, :coal, :wind, :offwind, :pv, :pvroof, :csp, :gasCCGT, :bioCCGT, :hydro, :bioGT, :gasGT, :battery]
+	techlabels = [k for r=1:1, k in displaytechs]
+	displayorder = [i for (i,k) in enumerate(TECH), d in displaytechs if d == k]
+
+	return totalelec, totaldemand, hoursperperiod, displayorder, techlabels
+end
+
+function getscenresults(scen, resultsnames)
+	scenelec = zeros(13,length(scen))
+	demands = zeros(length(scen))
+	hoursperperiod, displayorder, techlabels = nothing, nothing, nothing
+
+	for (i,s) in enumerate(scen)
+		println("Loading results: $s...")
+		totalelec, totaldemand, hoursperperiod, displayorder, techlabels = readscenariodata(resultsnames[i])
+		scenelec[:,i] = totalelec
+		demands[i] = totaldemand
+	end
+	return scenelec, demands, hoursperperiod, displayorder, techlabels
+end
+
 function plotiew_bubbles_v1()
 	@load "iewruns2_1h.jld2" results allstatus
 	res = results
