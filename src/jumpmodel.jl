@@ -80,9 +80,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 			transmissioninvestcost, transmissionfixedcost, hydroeleccost = params
 	@unpack Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, TransmissionCapacity, Capacity = vars
 	@unpack hoursperperiod = hourinfo
-	@unpack carbontax, carboncap, rampingconstraints, maxbiocapacity, globalnuclearlimit = options
-
-	maxdemand = dropdims(maximum(demand, dims=2), dims=2)
+	@unpack carbontax, carboncap, rampingconstraints, maxbioenergy, globalnuclearlimit = options
 
 	@constraints m begin
 		ElecCapacity[r in REGION, k in TECH, c in CLASS[k], h in HOUR],
@@ -118,9 +116,6 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 		NoCharging[r in REGION, h in HOUR, k in [:hydro, :csp]],
 			Charging[r,k,h] == 0
 
-		BioLimit[r in REGION],
-			Capacity[r,:bioGT,:_] + Capacity[r,:bioCCGT,:_] <= maxbiocapacity * maxdemand[r]
-
 		ChargingNeedsBattery[r in REGION, h in HOUR],
 			Charging[r,:battery,h] <= Capacity[r,:battery, :_] * hoursperperiod
 
@@ -135,6 +130,9 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 
 		Calculate_FuelUse[r in REGION, f in FUEL; f != :_],
 			FuelUse[r,f] == sum(Electricity[r,k,c,h]/efficiency[k] for k in TECH, c in CLASS[k], h in HOUR if techfuel[k]==f)
+
+		BioLimit[r in REGION],
+			FuelUse[r,:biogas] <= maxbioenergy * sum(demand[r,h] for h in HOUR) * hoursperperiod / efficiency[:bioCCGT]
 
 		TotalCO2[r in REGION],
 			CO2emissions[r] == sum(FuelUse[r,f] * emissionsCO2[f] for f in FUEL)

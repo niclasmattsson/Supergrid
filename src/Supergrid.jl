@@ -19,7 +19,7 @@ include("iewruns.jl")
 defaultoptions() = Dict(
 		:carbontax => 0.0,					# €/ton CO2
 		:carboncap => 1.0,					# global cap in kg CO2/kWh elec  (BAU scenario: ~0.5 kgCO2/kWh elec)
-		:maxbiocapacity => 0.05,			# share of peak demand
+		:maxbioenergy => 0.05,				# max share of biofuel of annual regional electricity demand (assuming CCGT, less if GT) 
 		:nuclearallowed => true,
 		:globalnuclearlimit => Inf,			# maximum total nuclear capacity in all regions (GW)
 		:hydroinvestmentsallowed => false,
