@@ -33,7 +33,8 @@ defaultoptions() = Dict(
 		:showsolverlog => true,
 		:rampingconstraints => false,
 		:rampingcosts => false,
-		:disabletechs => []
+		:disabletechs => [],
+		:resultsfile => "results.jld2"		# use "" to skip saving the results 
 	)
 
 function autorunname(options)
@@ -42,7 +43,7 @@ function autorunname(options)
 		name *= "$key=$value, "
 	end
 	if isempty(name)
-		name = "base"
+		name = "default"
 	else
 		name = name[1:end-2]
 	end
@@ -91,11 +92,15 @@ function runmodel(; name="", group="", optionlist...)		# carbon tax in €/ton C
 
 	println("\nReading results...")
 	results = readresults(model, status)
-	if isempty(name)
-		name = autorunname(model.options)
+
+	filename = model.options[:resultsfile]
+	if isempty(filename)
+		if isempty(name)
+			name = autorunname(model.options)
+		end
+		println("\nSaving results to disk...")
+		saveresults(results, name, resultsfile=filename, group=group)
 	end
-	println("\nSaving results to disk...")
-	saveresults(results, name, group=group)
 
 	if status == :Optimal
 		annualelec, capac, tcapac, chart = showresults(results)

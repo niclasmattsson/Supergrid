@@ -44,14 +44,15 @@ function readresults(model::ModelInfo, status::Symbol)
 	return Results(status, model.options, model.hourinfo, model.sets, params, cost, emis, fuel, elec, charge, storage, transmission, transmissioncapac, capac)
 end
 
-function saveresults(results::Results, runname; filename="results.jld2", group="", compress=true)
+function saveresults(results::Results, runname; resultsfile="", group="", compress=true)
+	isempty(resultsfile) && return nothing
 	if !isempty(group) && group[end] != '/'
 		group *= "/"
 	end
 	runname = "$group$runname"
-	jldopen(filename, "a+", compress=compress) do file
+	jldopen(resultsfile, "a+", compress=compress) do file
 		if haskey(file, runname)
-			@warn "The run $runname already exists in $filename (new run not saved to disk). "
+			@warn "The run $runname already exists in $resultsfile (new run not saved to disk). "
 		else
 			file[runname] = results
 		end
@@ -59,32 +60,32 @@ function saveresults(results::Results, runname; filename="results.jld2", group="
 	return nothing
 end
 
-function listresults(; filename="results.jld2", group="")
+function listresults(; resultsfile="results.jld2", group="")
 	if !isempty(group) && group[end] != '/'
 		group *= "/"
 	end
-	jldopen(filename, "r") do file
+	jldopen(resultsfile, "r") do file
 		display(file)
 	end
 	return nothing
 end
 
-function loadresults(; filename="results.jld2", group="", loadoptions...)
+function loadresults(; resultsfile="results.jld2", group="", loadoptions...)
 	options = merge(defaultoptions(), loadoptions)
-	loadresults(autorunname(options); filename=filename, group=group)
+	loadresults(autorunname(options); resultsfile=resultsfile, group=group)
 end
 
-function loadresults(runname::String; filename="results.jld2", group="")
+function loadresults(runname::String; resultsfile="results.jld2", group="")
 	if !isempty(group) && group[end] != '/'
 		group *= "/"
 	end
 	runname = "$group$runname"
 	results = nothing
-	jldopen(filename, "r") do file
+	jldopen(resultsfile, "r") do file
 		if haskey(file, runname)
 			results = file[runname]
 		else
-			println("\nThe run $runname does not exist in $filename.")
+			println("\nThe run $runname does not exist in $resultsfile.")
 		end
 	end
 	return results
