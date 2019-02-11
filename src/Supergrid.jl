@@ -7,8 +7,8 @@ using JuMP, CPLEX, Gurobi, Parameters, AxisArrays, Plots, JLD2, Statistics
 
 include("helperfunctions.jl")
 include("types.jl")
-include("inputdataEurasia21.jl")
-# include("inputdataEurope8.jl")
+# include("inputdataEurasia21.jl")
+include("inputdataEurope8.jl")
 # include("inputdataEuroChine14.jl")
 # include("inputdataChina6.jl")
 # include("inputdataMENA.jl")

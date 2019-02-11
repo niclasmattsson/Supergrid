@@ -77,8 +77,9 @@ end
 
 CRF(r,T) = r / (1 - 1/(1+r)^T)
 
-function makeparameters(sets, hourinfo)
+function makeparameters(sets, options, hourinfo)
 	@unpack REGION, FUEL, TECH, CLASS, HOUR = sets
+	@unpack solarwindarea = options
 
 	year = 2016
 	hoursperyear = 8760
@@ -258,14 +259,14 @@ function makeparameters(sets, hourinfo)
 	cf[isnan.(cf)] = zeros(sum(isnan.(cf)))
 	cf[cf .< 0.01] = zeros(sum(cf .< 0.01))		# set small values to 0 for better numerical stability
 
-	classlimits[:,:wind,1:5] = windvars["capacity_onshoreA"][1:numregions,:]
-	classlimits[:,:offwind,1:5] = windvars["capacity_offshore"][1:numregions,:]
-	classlimits[:,:pv,1:5] = solarvars["capacity_pvplantA"][1:numregions,:]
-	classlimits[:,:pvroof,1:5] = solarvars["capacity_pvrooftop"][1:numregions,:]
-	classlimits[:,:csp,1:5] = solarvars["capacity_cspplantA"][1:numregions,:]
-	classlimits[:,:wind,6:10] = windvars["capacity_onshoreB"][1:numregions,:]
-	classlimits[:,:pv,6:10] = solarvars["capacity_pvplantB"][1:numregions,:]
-	classlimits[:,:csp,6:10] = solarvars["capacity_cspplantB"][1:numregions,:]
+	classlimits[:,:wind,1:5] = windvars["capacity_onshoreA"][1:numregions,:] * solarwindarea
+	classlimits[:,:offwind,1:5] = windvars["capacity_offshore"][1:numregions,:] * (1 + 0.5*(solarwindarea - 1))	# only half because default offshore area is 33%
+	classlimits[:,:pv,1:5] = solarvars["capacity_pvplantA"][1:numregions,:] * solarwindarea
+	classlimits[:,:pvroof,1:5] = solarvars["capacity_pvrooftop"][1:numregions,:] * solarwindarea
+	classlimits[:,:csp,1:5] = solarvars["capacity_cspplantA"][1:numregions,:] * solarwindarea
+	classlimits[:,:wind,6:10] = windvars["capacity_onshoreB"][1:numregions,:] * solarwindarea
+	classlimits[:,:pv,6:10] = solarvars["capacity_pvplantB"][1:numregions,:] * solarwindarea
+	classlimits[:,:csp,6:10] = solarvars["capacity_cspplantB"][1:numregions,:] * solarwindarea
 
 	investcost = AxisArray(zeros(length(techs),length(allclasses)), techs, allclasses)	# €/kW
 	for k in techs, c in CLASS[k]

@@ -1,4 +1,4 @@
-using NamedArrays, StatPlots, JLD2
+using NamedArrays, StatsPlots, JLD2
 
 sumdimdrop(x::AbstractArray; dims) = dropdims(sum(x, dims=dims), dims=dims)
 

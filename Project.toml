@@ -1,0 +1,22 @@
+name = "Supergrid"
+uuid = "32628ed0-2df8-11e9-34a4-b5e7f6273a90"
+authors = ["niclasmattsson <33093224+niclasmattsson@users.noreply.github.com>"]
+version = "0.1.0"
+
+[deps]
+AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
+CPLEX = "a076750e-1247-5638-91d2-ce28b192dca0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+Gurobi = "2e9cd046-0924-5485-92f1-d5272153d98b"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
+NamedArrays = "86f7a689-2022-50b4-a561-43c23ac3c673"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
+TimeZones = "f269a46b-ccf7-5d73-abea-4c690281aa53"
