@@ -7,18 +7,18 @@ A capacity expansion model of the electricity system for arbitrary world regions
 Type `]` to enter Julia's package mode, then:
 
 ```
-(v1.1) pkg> add https://github.com/niclasmattsson/Supergrid
-
 (v1.1) pkg> add https://github.com/halleysfifthinc/MAT.jl#v0.7-update
+
+(v1.1) pkg> add https://github.com/niclasmattsson/Supergrid
 ``` 
-Hopefully that last line won't be needed in the near future, but include it for now.
+That first line may take several minutes to run (during the building step). Hopefully it won't be needed in the near future, but include it for now.
 
 ## Running the model
 
 ```
 julia> using Supergrid, AxisArrays
 
-julia> r, annualelec, capac, tcapac, chart = runmodel(carboncap=0.0);
+julia> r, annualelec, capac, tcapac, chart = runmodel(regionset=:europe8, carboncap=0.1, hours=3);
 ```
 
 If you forget the last semicolon a **LOT** of results will get dumped to the console.
@@ -46,7 +46,7 @@ defaultoptions() = Dict(
         :rampingcosts => false,
         :disabletechs => [],
         :disableregions => [],
-        :islandindexes => [],               # [1:8, 9:15, 16:21] for eurasia21
+        :islandindexes => [],               # Defining "superregions", e.g. use [1:8, 9:15, 16:21] for eurasia21
         :resultsfile => "results.jld2"      # use "" to skip saving the results in the database
     )
 ```
@@ -54,11 +54,11 @@ defaultoptions() = Dict(
 ## Chart options
 
 ```
-julia> chart(:BARS)
+julia> chart(:BARS)     # regional annual electricity generation and a separate bar with global totals
 
-julia> chart(:GER)
+julia> chart(:GER)      # [or any other region name] hourly electricity generation in that region and usage of renewable resource classes
 
-julia> chart(:TOT)
+julia> chart(:TOT)      # same as previous except for global totals (aggregate of all regions)
 ```
 
 ## Using the results database
