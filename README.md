@@ -61,3 +61,17 @@ julia> chart(:TOT)
 
 ```
 
+## Using the results database
+
+```
+julia> listresults()
+JLDFile C:\Stuff\Julia\results.jld2 (read-only)
+ ├─� hours=3, disableregions=Symbol[:MED, :BAL, :SPA, :CEN, :GER], carboncap=0.0
+ └─� hours=3, carboncap=50.0
+
+julia> r = loadresults("hours=3, carboncap=50.0");
+
+julia> annualelec, capac, tcapac, chart = analyzeresults(r);
+
+julia> chart(:BARS)
+```
