@@ -91,7 +91,7 @@ function loadresults(runname::String; resultsfile="results.jld2", group="")
 	return results
 end
 
-function showresults(results::Results)
+function analyzeresults(results::Results)
 	@unpack REGION, FUEL, TECH, CLASS, HOUR, techtype, STORAGECLASS = results.sets
 	@unpack demand, classlimits, hydrocapacity = results.params
 	@unpack CO2emissions, FuelUse, Electricity, Transmission, Capacity, TransmissionCapacity, Charging, StorageLevel, Systemcost = results

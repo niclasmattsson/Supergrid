@@ -1,6 +1,6 @@
 module Supergrid
 
-export runmodel, buildmodel, readresults, saveresults, showresults, listresults, loadresults, makesets, makeparameters
+export runmodel, buildmodel, readresults, saveresults, analyzeresults, listresults, loadresults, makesets, makeparameters
 
 #println("Importing packages...")
 using JuMP, CPLEX, Gurobi, Parameters, AxisArrays, Plots, JLD2, Statistics
@@ -103,7 +103,7 @@ function runmodel(; name="", group="", optionlist...)		# carbon tax in €/ton C
 	end
 
 	if status == :Optimal
-		annualelec, capac, tcapac, chart = showresults(results)
+		annualelec, capac, tcapac, chart = analyzeresults(results)
 	else
 		annualelec, capac, tcapac, chart = nothing, nothing, nothing, nothing
 	end
