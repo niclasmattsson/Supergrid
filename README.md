@@ -7,7 +7,7 @@ A capacity expansion model of the electricity system for arbitrary world regions
 Type `]` to enter package mode, then:
 
 ```
-(v1.1) pkg> add https://github.com/niclasmattsson/Supergrid.jl
+(v1.1) pkg> add https://github.com/niclasmattsson/Supergrid
 ``` 
 
 ## Running the model
@@ -29,8 +29,9 @@ If you forget the last semicolon a **LOT** of results will get dumped to the con
 
 ```
 defaultoptions() = Dict(
+        :regionset => :europe8,             # :eurasia21, :europe8
         :carbontax => 0.0,                  # €/ton CO2
-        :carboncap => 1.0,                  # global cap in kg CO2/kWh elec (BAU scenario: ~0.5 kgCO2/kWh elec)
+        :carboncap => 1.0,                  # global cap in kg CO2/kWh elec  (BAU scenario: ~0.5 kgCO2/kWh elec)
         :maxbioenergy => 0.05,              # max share of biofuel of annual regional electricity demand (assuming CCGT, less if GT) 
         :nuclearallowed => true,
         :globalnuclearlimit => Inf,         # maximum total nuclear capacity in all regions (GW)
@@ -46,7 +47,9 @@ defaultoptions() = Dict(
         :rampingconstraints => false,
         :rampingcosts => false,
         :disabletechs => [],
-        :resultsfile => "results.jld2"		# use "" to skip saving the results 
+        :disableregions => [],
+        :islandindexes => [],               # [1:8, 9:15, 16:21] for eurasia21
+        :resultsfile => "results.jld2"      # use "" to skip saving the results in the database
     )
 ```
 
