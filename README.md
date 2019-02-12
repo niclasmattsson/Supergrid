@@ -4,20 +4,18 @@ A capacity expansion model of the electricity system for arbitrary world regions
 
 ## Installation
 
-Type `]` to enter package mode, then:
+Type `]` to enter Julia's package mode, then:
 
 ```
 (v1.1) pkg> add https://github.com/niclasmattsson/Supergrid
+
+(v1.1) pkg> add https://github.com/halleysfifthinc/MAT.jl#v0.7-update
 ``` 
+Hopefully that last line won't be needed in the near future, but include it for now.
 
 ## Running the model
 
 ```
-(v1.1) pkg> activate Supergrid
-
-(Supergrid) pkg> precompile
-Precompiling project...
-
 julia> using Supergrid, AxisArrays
 
 julia> r, annualelec, capac, tcapac, chart = runmodel(carboncap=0.0);
@@ -61,7 +59,6 @@ julia> chart(:BARS)
 julia> chart(:GER)
 
 julia> chart(:TOT)
-
 ```
 
 ## Using the results database
