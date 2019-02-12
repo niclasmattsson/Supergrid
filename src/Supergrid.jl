@@ -7,16 +7,13 @@ using JuMP, CPLEX, Gurobi, Parameters, AxisArrays, Plots, JLD2, Statistics
 
 include("helperfunctions.jl")
 include("types.jl")
-# include("inputdataEurasia21.jl")
-include("inputdataEurope8.jl")
-# include("inputdataEuroChine14.jl")
-# include("inputdataChina6.jl")
-# include("inputdataMENA.jl")
+include("inputdata.jl")
 include("jumpmodel.jl")
 include("output.jl")
 include("iewruns.jl")
 
 defaultoptions() = Dict(
+		:regionset => :europe8,				# :eurasia21, :europe8
 		:carbontax => 0.0,					# €/ton CO2
 		:carboncap => 1.0,					# global cap in kg CO2/kWh elec  (BAU scenario: ~0.5 kgCO2/kWh elec)
 		:maxbioenergy => 0.05,				# max share of biofuel of annual regional electricity demand (assuming CCGT, less if GT) 
@@ -34,7 +31,9 @@ defaultoptions() = Dict(
 		:rampingconstraints => false,
 		:rampingcosts => false,
 		:disabletechs => [],
-		:resultsfile => "results.jld2"		# use "" to skip saving the results 
+		:disableregions => [],
+		:islandindexes => [],				# [1:8, 9:15, 16:21] for eurasia21
+		:resultsfile => "results.jld2"		# use "" to skip saving the results in the database
 	)
 
 function autorunname(options)
@@ -59,7 +58,7 @@ function buildsetsparams(; optionlist...)
 	println("\nReading input data...")
 	options = merge(defaultoptions(), optionlist)
 	hourinfo = HourSampling(options)
-	@time sets = makesets(hourinfo)
+	@time sets = makesets(hourinfo, options)
 	@time params = makeparameters(sets, options, hourinfo)
 	return options, hourinfo, sets, params
 end
@@ -79,8 +78,8 @@ function buildvarsmodel(options, hourinfo, sets, params)
 	return ModelInfo(modelname, sets, params, vars, constraints, hourinfo, options)	
 end
 
-# BASIC USAGE: (carbon tax 50 €/ton CO2, 1-hour time periods, "true" to make some results charts)
-# m, annualelec, capac, tcapac, chart = runmodel(50,1);
+# BASIC USAGE: (carbon tax 50 €/ton CO2, 3-hour time periods)
+# m, annualelec, capac, tcapac, chart = runmodel(carboncap=50, hours=3, [more options]...);
 function runmodel(; name="", group="", optionlist...)		# carbon tax in €/ton CO2
 	model = buildmodel(; optionlist...)
 
@@ -94,7 +93,8 @@ function runmodel(; name="", group="", optionlist...)		# carbon tax in €/ton C
 	results = readresults(model, status)
 
 	filename = model.options[:resultsfile]
-	if isempty(filename)
+
+	if !isempty(filename)
 		if isempty(name)
 			name = autorunname(model.options)
 		end

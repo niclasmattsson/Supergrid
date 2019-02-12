@@ -8,6 +8,7 @@ struct Sets
 	techtype		::Dict{Symbol,Symbol}
 	techfuel		::Dict{Symbol,Symbol}
 	reservoirclass	::Dict{Symbol, Vector{Symbol}}
+	dataregions		::Vector{Symbol}
 end
 
 # need to specify AxisArray types in more detail
