@@ -160,15 +160,15 @@ version = "0.8.0"
 
 [[DiffResults]]
 deps = ["Compat", "StaticArrays"]
-git-tree-sha1 = "db8acf46717b13d6c48deb7a12007c7f85a70cf7"
+git-tree-sha1 = "34a4a1e8be7bc99bc9c611b895b5baf37a80584c"
 uuid = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
-version = "0.0.3"
+version = "0.0.4"
 
 [[DiffRules]]
 deps = ["Random", "Test"]
-git-tree-sha1 = "09d69da75967ec48a8b1ad0897ec9144ee052bf9"
+git-tree-sha1 = "26b96a1a506b06cb272ef60568d478adab039b96"
 uuid = "b552c78f-8df3-52c6-915a-8e097449b14b"
-version = "0.0.8"
+version = "0.0.9"
 
 [[Distances]]
 deps = ["LinearAlgebra", "Printf", "Random", "Statistics", "Test"]
@@ -218,9 +218,9 @@ version = "0.10.2"
 
 [[GR]]
 deps = ["Base64", "DelimitedFiles", "LinearAlgebra", "Pkg", "Printf", "Random", "Serialization", "Sockets", "Test"]
-git-tree-sha1 = "3c62c19ddf86ff016829fdac1663cd3c75558c34"
+git-tree-sha1 = "41bd911efffb56957b45366770eaaa443de3f782"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.37.0"
+version = "0.38.1"
 
 [[Gurobi]]
 deps = ["Compat", "Libdl", "LinQuadOptInterface", "MathProgBase"]
@@ -295,6 +295,7 @@ version = "0.20.0"
 [[JuMP]]
 deps = ["Calculus", "Compat", "ForwardDiff", "Libdl", "MathProgBase", "Pkg", "ReverseDiffSparse", "Serialization"]
 git-tree-sha1 = "3bd8e52f7aeb2736a8e1b0d8ae8d01c2c85fea24"
+pinned = true
 uuid = "4076af6c-e467-56ae-b986-b466b2749572"
 version = "0.18.5"
 
@@ -394,9 +395,9 @@ version = "0.5.7"
 
 [[NLSolversBase]]
 deps = ["Calculus", "DiffEqDiffTools", "DiffResults", "Distributed", "ForwardDiff", "LinearAlgebra", "Random", "SparseArrays", "Test"]
-git-tree-sha1 = "3d58d0970b04c545534c0e70f3d8f12fe429b5e6"
+git-tree-sha1 = "0c6f0e7f2178f78239cfb75310359eed10f2cacb"
 uuid = "d41bc354-129a-5804-8e4c-c37616107c6c"
-version = "7.2.0"
+version = "7.3.1"
 
 [[NaNMath]]
 deps = ["Compat"]
@@ -627,9 +628,9 @@ version = "0.4.1"
 
 [[TableTraitsUtils]]
 deps = ["DataValues", "IteratorInterfaceExtensions", "Missings", "TableTraits", "Test"]
-git-tree-sha1 = "a355f1882d64881a11f853e64dcc353975c4df6e"
+git-tree-sha1 = "55133a5476b61ec31060e555ffe12da27ac13682"
 uuid = "382cd787-c1b6-5bf2-a167-d5b971a19bda"
-version = "0.3.1"
+version = "0.4.0"
 
 [[Test]]
 deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
@@ -667,10 +668,10 @@ uuid = "81def892-9a0e-5fdd-b105-ffc91e053289"
 version = "1.1.3"
 
 [[Widgets]]
-deps = ["Observables", "OrderedCollections", "Test"]
-git-tree-sha1 = "c928228be493bab724f5ae35a38fb1415ae5cee9"
+deps = ["Colors", "Dates", "Observables", "OrderedCollections", "Test"]
+git-tree-sha1 = "f48ee34d9495924aba50eeb328d83b0034b787f5"
 uuid = "cc8bc4a8-27d6-5769-a93b-9d913e69aa62"
-version = "0.4.4"
+version = "0.5.0"
 
 [[WinRPM]]
 deps = ["BinDeps", "Compat", "HTTPClient", "LibExpat", "Libdl", "Libz", "URIParser"]
