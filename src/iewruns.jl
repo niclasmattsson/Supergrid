@@ -2,6 +2,32 @@ using Plots, JLD2, FileIO, Plots.PlotMeasures
 
 plotly()
 
+function CAnucleartest()
+	# resultslist = Dict()
+	# capacity = Dict()
+	# energy = Dict()
+	@load "nuclearcosts2.jld2" resultslist capacity energy
+	for nuccost in 8500:500:9000
+		options, hourinfo, sets, params = buildsetsparams(carboncap=0.0, hydroinvestmentsallowed=false)
+		println("\n\n\nNew run: nuclear cost=$nuccost.")
+		params.investcost[:nuclear,:_] = nuccost
+		model = buildvarsmodel(options, hourinfo, sets, params)
+		println("\nSolving model...")
+		status = solve(model.modelname)
+		println("\nSolve status: $status")
+		resultslist[nuccost] = sum(getvalue(model.vars.Systemcost)) / sum(params.demand) * 1000
+		capacity[nuccost] = sum(getvalue(model.vars.Capacity[r,:nuclear,:_]) for r in sets.REGION)
+		energy[nuccost] = sum(getvalue(model.vars.Electricity[r,:nuclear,:_,h]) for r in sets.REGION, h in sets.HOUR) / sum(params.demand) 
+		@save "nuclearcosts2.jld2" resultslist capacity energy
+		println("\nReading results...")
+		results = readresults(model, status)
+		name = autorunname(model.options) * ", nuccost=$nuccost"
+		println("\nSaving results to disk...")
+		saveresults(results, name, resultsfile="nuclearruns.jld2")
+	end
+	resultslist, capacity
+end
+
 function IEWruns1(hourinterval)
 	resultslist = Dict()
 	allstatus = Dict()
