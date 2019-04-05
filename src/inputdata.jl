@@ -315,3 +315,13 @@ function makeparameters(sets, options, hourinfo)
 		efficiency, rampingrate, dischargetime, initialstoragelevel, minflow_existinghydro, emissionsCO2, fuelcost,
 		variablecost, smalltransmissionpenalty, investcost, crf, fixedcost, transmissioninvestcost, transmissionfixedcost, hydroeleccost)
 end
+
+# Run fix_timezone_error() if an error like this is produced (the build step should take care if this for most people):
+# (I'm not even sure if this helps...)
+#
+# julia> r, annualelec, capac, tcapac, chart = runmodel(regionset=:europe8, carboncap=0.1, hours=3);
+#
+# Reading input data...
+#   1.257888 seconds (1.77 M allocations: 92.844 MiB, 2.44% gc time)
+# ERROR: UnhandledTimeError: TimeZone Europe/Oslo does not handle dates on or after 2038-03-28T01:00:00 UTC
+fix_timezone_error() = TimeZones.TZData.compile(max_year=2200)

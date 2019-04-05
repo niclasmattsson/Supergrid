@@ -1,6 +1,7 @@
 module Supergrid
 
-export runmodel, buildmodel, readresults, saveresults, analyzeresults, listresults, loadresults, makesets, makeparameters
+export runmodel, buildmodel, readresults, saveresults, analyzeresults, listresults, loadresults, makesets, makeparameters,
+        fix_timezone_error
 
 #println("Importing packages...")
 using JuMP, CPLEX, Gurobi, Parameters, AxisArrays, Plots, JLD2, Statistics
