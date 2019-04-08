@@ -58,6 +58,9 @@ end
 function buildsetsparams(; optionlist...)
     println("\nReading input data...")
     options = merge(defaultoptions(), optionlist)
+    if options[:regionset] == :eurasia21 && isempty(options[:islandindexes])
+        options[:islandindexes] = [1:8, 9:15, 16:21]    # change defaults for eurasia21
+    end
     hourinfo = HourSampling(options)
     @time sets = makesets(hourinfo, options)
     @time params = makeparameters(sets, options, hourinfo)
