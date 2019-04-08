@@ -28,6 +28,29 @@ function CAnucleartest()
 	resultslist, capacity
 end
 
+function FHnuclearextraruns()
+	for nuc in [true, false]
+		for tm in [:islands, :all]
+			println("\n\n\nNew run: nuclear=$nuc, transmission=$tm")
+			runmodel(regionset=:eurasia21, carboncap=0, nuclearallowed=nuc, hydroinvestmentsallowed=false, transmissionallowed=tm,
+						resultsfile="FHnuclearextraruns.jld2");  # globalnuclearlimit=200,
+		end
+	end
+end
+
+function plot_FHnuclearextraruns_energymix()
+	scen = ["Islands - no nuclear", "Supergrid - no nuclear", "Islands - 200GW nuclear", "Supergrid - 200GW nuclear", "Islands - unlimited nuclear", "Supergrid - unlimited nuclear"]
+	resultsnames = ["regionset=eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=eurasia21, nuclearallowed=false, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=eurasia21, transmissionallowed=islands, globalnuclearlimit=200, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=eurasia21, globalnuclearlimit=200, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=eurasia21, transmissionallowed=islands, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=eurasia21, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]"]
+	resultsfile = "FHnuclearextraruns.jld2"
+	plotiew_energymix(scen, resultsnames, resultsfile)
+	# plotiew_energymix(scen[1,2,5,6], resultsnames[1,2,5,6], resultsfile)
+end
+
 function IEWruns1(hourinterval)
 	resultslist = Dict()
 	allstatus = Dict()
@@ -51,7 +74,7 @@ function IEWruns1(hourinterval)
 					results = readresults(model, status)
 					name = autorunname(model.options)
 					println("\nSaving results to disk...")
-					saveresults(results, name, filename="iewruns1_hydro.jld2")
+					saveresults(results, name, resultsfile="iewruns1_hydro.jld2")
 				end
 			end
 		end
@@ -104,7 +127,7 @@ function IEWruns2(hourinterval)
 							results = readresults(model, status)
 							name = autorunname(model.options) * ", solarwind=$solarwind, solar=$solar, battery=$battery"
 							println("\nSaving results to disk...")
-							saveresults(results, name, filename="iewruns2.jld2")
+							saveresults(results, name, resultsfile="iewruns2.jld2")
 						end
 					end
 				end
@@ -152,7 +175,7 @@ function mergeresults()
 end
 
 function plotiew_lines_v2()
-	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", filename="iewruns1.jld2");  sum(r.params[:demand])
+	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewcosts1.jld2" resultslist allstatus
 	res = resultslist
 	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
@@ -204,7 +227,7 @@ end
 
 # using JLD2, Plots; @load "iewruns1_1h.jld2" results allstatus; plotly()
 function plotiew_lines_v1()
-	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", filename="iewruns1.jld2");  sum(r.params[:demand])
+	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewruns1_1h.jld2" results allstatus
 	res = results
 	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
@@ -218,7 +241,7 @@ function plotiew_lines_v1()
 end
 
 function plotiew_lines1_paper()
-	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", filename="iewruns1.jld2");  sum(r.params[:demand])
+	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewruns1_1h.jld2" results allstatus
 	res = results
 	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
@@ -236,7 +259,7 @@ function plotiew_lines1_paper()
 end
 
 function plotiew_lines2_paper()
-	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", filename="iewruns1.jld2");  sum(r.params[:demand])
+	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewcosts1.jld2" resultslist allstatus
 	res = resultslist
 	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
@@ -298,27 +321,34 @@ function plotiew_bubbles_paper()
 	display(plot(s1, s2, layout=2, size=(1000,450)))
 end
 
-function plotiew_energymix(scenelec, demands, hoursperperiod, displayorder, techlabels)
+function plotiew_land_energymix()
 	scen = ["Is-lowL", "Sup-lowL", "Is-highL", "Sup-highL"]
 	resultsnames = ["transmissionallowed=islands, nuclearallowed=false, carboncap=0.001",
 					"nuclearallowed=false, carboncap=0.001",
 					"transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, solarwindarea=4",
 					"nuclearallowed=false, carboncap=0.001, solarwindarea=4"]
-	
-	# scenelec, demands, hoursperperiod, displayorder, techlabels = getscenresults(scen, resultsnames)
+	resultsfile = "iewruns1.jld2"
+	plotiew_energymix(scen, resultsnames, resultsfile)
+end
+
+function plotiew_energymix(scen, resultsnames, resultsfile)
+	scenelec, demands, hoursperperiod, displayorder, techlabels = getscenresults(scen, resultsnames, resultsfile)
 
 	palette = [RGB([216,137,255]/255...), RGB([119,112,71]/255...), RGB([199,218,241]/255...), RGB([149,179,215]/255...),
 		RGB([255,255,64]/255...), RGB([240,224,0]/255...), RGB([214,64,64]/255...), RGB([255,192,0]/255...), RGB([99,172,70]/255...),
 		RGB([100,136,209]/255...), RGB([144,213,93]/255...), RGB([148,138,84]/255...), RGB([157,87,205]/255...)]
-	groupedbarflip(collect(scenelec[displayorder,:]')/1e6, label=techlabels, bar_position = :stack, size=(600,550),
-			left_margin=20px, xticks=(1:4,scen), line=0, tickfont=12, legendfont=12, guidefont=12, color_palette=palette, ylabel="[PWh/year]")
-	xpos = (1:4)'
-	display(plot!([xpos; xpos], [zeros(4)'; demands'*hoursperperiod/1e6], line=3, color=:black, label=["demand" "" "" ""]))
+	groupedbarflip(collect(scenelec[displayorder,:]')/1e6, label=techlabels, bar_position = :stack, size=(900,550),
+			left_margin=20px, xticks=(1:length(scen),scen), line=0, tickfont=12, legendfont=12, guidefont=12, color_palette=palette, ylabel="[PWh/year]")
+	xpos = (1:length(scen))'
+	lab = fill("",(1,length(scen)))
+	lab[1] = "demand"
+	display(plot!([xpos; xpos], [zeros(length(scen))'; demands'*hoursperperiod/1e6], line=3, color=:black, label=lab))
 	nothing
 end
 
-function readscenariodata(resultname)
-	results = loadresults(resultname, filename="iewruns1.jld2")
+function readscenariodata(resultname, resultsfile)
+	println(resultname, " ", resultsfile)
+	results = loadresults(resultname, resultsfile=resultsfile)
 	@unpack TECH, REGION, CLASS, HOUR = results.sets
 	hoursperperiod = results.hourinfo.hoursperperiod
 	totaldemand = sum(results.params[:demand])
@@ -331,14 +361,14 @@ function readscenariodata(resultname)
 	return totalelec, totaldemand, hoursperperiod, displayorder, techlabels
 end
 
-function getscenresults(scen, resultsnames)
+function getscenresults(scen, resultsnames, resultsfile)
 	scenelec = zeros(13,length(scen))
 	demands = zeros(length(scen))
 	hoursperperiod, displayorder, techlabels = nothing, nothing, nothing
 
 	for (i,s) in enumerate(scen)
 		println("Loading results: $s...")
-		totalelec, totaldemand, hoursperperiod, displayorder, techlabels = readscenariodata(resultsnames[i])
+		totalelec, totaldemand, hoursperperiod, displayorder, techlabels = readscenariodata(resultsnames[i], resultsfile)
 		scenelec[:,i] = totalelec
 		demands[i] = totaldemand
 	end
@@ -383,7 +413,7 @@ function plotiew_bubbles_v2()
 end
 
 function plotiew_bubbles_v2_abs()
-	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", filename="iewruns1.jld2");  sum(r.params[:demand])
+	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewcosts2.jld2" resultslist allstatus
 	res = resultslist
 	rows = [3 3 3 2 2 2 1 1 1]
