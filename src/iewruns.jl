@@ -63,18 +63,18 @@ function IEWruns1(hourinterval)
 					# runcount in [1] && continue
 					println("\n\n\nNew run: nuclear=$nuc, solarwind=$solarwind, transmission=$tm, cap=$cap.")
 					model = buildmodel(hours=hourinterval, carboncap=cap, maxbioenergy=0.05, 
-										nuclearallowed=nuc, hydroinvestmentsallowed=true, transmissionallowed=tm, solarwindarea=solarwind)
+										nuclearallowed=nuc, transmissionallowed=tm, solarwindarea=solarwind)
 					println("\nSolving model...")
 					status = solve(model.modelname)
 					println("\nSolve status: $status")
 					resultslist[nuc,solarwind,tm,cap] = sum(getvalue(model.vars.Systemcost))
 					allstatus[nuc,solarwind,tm,cap] = status
-					@save "iewcosts1_hydro.jld2" resultslist allstatus
+					@save "iewcosts1_new.jld2" resultslist allstatus
 					println("\nReading results...")
 					results = readresults(model, status)
 					name = autorunname(model.options)
 					println("\nSaving results to disk...")
-					saveresults(results, name, resultsfile="iewruns1_hydro.jld2")
+					saveresults(results, name, resultsfile="iewruns1_new.jld2")
 				end
 			end
 		end
@@ -122,12 +122,12 @@ function IEWruns2(hourinterval)
 							println("\nSolve status: $status")
 							resultslist[solarwind,tm,cap,solar,battery] = sum(getvalue(model.vars.Systemcost))
 							allstatus[solarwind,tm,cap,solar,battery] = status
-							@save "iewcosts2.jld2" resultslist allstatus
+							@save "iewcosts2_new.jld2" resultslist allstatus
 							println("\nReading results...")
 							results = readresults(model, status)
 							name = autorunname(model.options) * ", solarwind=$solarwind, solar=$solar, battery=$battery"
 							println("\nSaving results to disk...")
-							saveresults(results, name, resultsfile="iewruns2.jld2")
+							saveresults(results, name, resultsfile="iewruns2_new.jld2")
 						end
 					end
 				end
@@ -242,8 +242,8 @@ end
 
 function plotiew_lines1_paper()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
-	@load "iewruns1_1h.jld2" results allstatus
-	res = results
+	@load "iewcosts1_new.jld2" resultslist allstatus
+	res = resultslist
 	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
 	res0 = res[true,:all,1]
 	resmat1 = [res[true,tm,cap/1000]/totaldemand*1000 for cap in carboncaps, tm in [:islands, :all]]
@@ -260,7 +260,7 @@ end
 
 function plotiew_lines2_paper()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
-	@load "iewcosts1.jld2" resultslist allstatus
+	@load "iewcosts1_new.jld2" resultslist allstatus
 	res = resultslist
 	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
 	res0 = get(res,(true,1,:all,1),0)
@@ -300,7 +300,7 @@ function plotiew_lines2_paper()
 end
 
 function plotiew_bubbles_paper()
-	@load "iewcosts2.jld2" resultslist allstatus
+	@load "iewcosts2_new.jld2" resultslist allstatus
 	res = resultslist
 	rows = [3 3 3 2 2 2 1 1 1]
 	cols = [3 2 1 3 2 1 3 2 1]
