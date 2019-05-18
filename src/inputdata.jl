@@ -291,7 +291,7 @@ function makeparameters(sets, options, hourinfo)
 		investcost[k,c] = baseinvestcost[k]
 	end
 	for k in [:wind,:pv,:csp]
-		investcost[k,6:10] .= baseinvestcost[k]*1.1
+		investcost[k,6:10] .+= 200
 	end
 
 	# adjust CSP parameters for solar multiple, convert solar capacity to electrical power
