@@ -127,9 +127,9 @@ function analyzeresults(results::Results)
 		#RGB([164,155,104]/255...),	#coal CCS
 		RGB([199,218,241]/255...),	#wind
 		RGB([149,179,215]/255...),	#wind offshore
+		RGB([214,64,64]/255...),	#solarCSP
 		RGB([255,255,64]/255...),	#solarPV
 		RGB([240,224,0]/255...),	#PVrooftop
-		RGB([214,64,64]/255...),	#solarCSP
 		RGB([255,192,0]/255...),	#CCGT
 		RGB([99,172,70]/255...),	#bioCCGT
 		RGB([100,136,209]/255...),	#hydro
@@ -138,7 +138,7 @@ function analyzeresults(results::Results)
 		RGB([157,87,205]/255...),	#battery
 	]
 
-	displaytechs = [:nuclear, :coal, :wind, :offwind, :pv, :pvroof, :csp, :gasCCGT, :bioCCGT, :hydro, :bioGT, :gasGT, :battery]
+	displaytechs = [:nuclear, :coal, :wind, :offwind, :csp, :pv, :pvroof, :gasCCGT, :bioCCGT, :hydro, :bioGT, :gasGT, :battery]
 	techlabels = [k for r=1:1, k in displaytechs]
 	displayorder = [i for (i,k) in enumerate(TECH), d in displaytechs if d == k]
 
