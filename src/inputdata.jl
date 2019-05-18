@@ -211,7 +211,7 @@ function makeparameters(sets, options, hourinfo)
 	transmissionislands = AxisArray(islands[activeregions,activeregions], REGION, REGION)
 
 	# PV and battery costs have high/mid/low costs:  high = 1.5*mid, low = 0.5*mid
-	techdata = [
+	techtable = [
 		#				investcost 	variablecost	fixedcost	lifetime	efficiency	rampingrate
 		#				€/kW		€/MWh elec		€/kW/year	years					share of capacity per hour
 		:gasGT			500			1				10			30			0.4			1
@@ -220,17 +220,17 @@ function makeparameters(sets, options, hourinfo)
 		:bioGT			500			1				10			30			0.4			1
 		:bioCCGT		800			1				16			30			0.6			0.3
 		:nuclear		5000		3				150			50			0.4			0.05
-		:wind			1200		0				36			25			1			1
-		:offwind		2000		0				60			25			1			1
+		:wind			1200		0				60			25			1			1
+		:offwind		2400		0				120			25			1			1
 		:transmission	NaN			0				NaN			50			NaN			1
 		:battery		150			0.1				1.5			10			0.9			1	# 1h discharge time, 150 €/kW = 150 €/kWh
 		:pv				800			0				16			25			1			1
-		:pvroof			1200		0				24			25			1			1
-		:csp			4000		0				36			30			1			1	# adjust investcost for solar multiple below
+		:pvroof			1000		0				20			25			1			1
+		:csp			3500		0				35			30			1			1	# adjust investcost for solar multiple below
 		:hydro			10			0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 
 	]
-	techs = techdata[:,1]
-	techdata = Float64.(techdata[:,2:end])
+	techs = techtable[:,1]
+	techdata = Float64.(techtable[:,2:end])
 	baseinvestcost = AxisArray(techdata[:,1], techs)	# €/kW
 	variablecost = AxisArray(techdata[:,2], techs)		# €/MWh elec
 	fixedcost = AxisArray(techdata[:,3], techs)			# €/kW/year
