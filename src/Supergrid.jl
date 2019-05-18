@@ -13,8 +13,10 @@ include("jumpmodel.jl")
 include("output.jl")
 include("iewruns.jl")
 
-defaultoptions() = Dict(
-        :regionset => :europe8,             # :eurasia21, :europe8
+function defaultoptions()
+    defaults = Dict(
+        :regionset => :Eurasia21,           # :eurasia21, :europe8
+        :islandindexes => [],               # superregion groupings: [1:8, 9:15, 16:21] for eurasia21, [] for europe8
         :carbontax => 0.0,                  # €/ton CO2
         :carboncap => 1.0,                  # global cap in kg CO2/kWh elec  (BAU scenario: ~0.5 kgCO2/kWh elec)
         :maxbioenergy => 0.05,              # max share of biofuel of annual regional electricity demand (assuming CCGT, less if GT) 
@@ -33,9 +35,13 @@ defaultoptions() = Dict(
         :rampingcosts => false,
         :disabletechs => [],
         :disableregions => [],
-        :islandindexes => [],               # [1:8, 9:15, 16:21] for eurasia21
         :resultsfile => "results.jld2"      # use "" to skip saving the results in the database
     )
+    if defaults[:regionset] == :eurasia21 && isempty(defaults[:islandindexes])
+        defaults[:islandindexes] = [1:8, 9:15, 16:21]    # change defaults for eurasia21
+    end
+    return defaults
+end
 
 function autorunname(options)
     name = ""
@@ -58,9 +64,6 @@ end
 function buildsetsparams(; optionlist...)
     println("\nReading input data...")
     options = merge(defaultoptions(), optionlist)
-    if options[:regionset] == :eurasia21 && isempty(options[:islandindexes])
-        options[:islandindexes] = [1:8, 9:15, 16:21]    # change defaults for eurasia21
-    end
     hourinfo = HourSampling(options)
     @time sets = makesets(hourinfo, options)
     @time params = makeparameters(sets, options, hourinfo)
