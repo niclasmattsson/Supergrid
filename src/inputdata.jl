@@ -18,13 +18,16 @@ function makesets(REGION, dataregions, hourinfo, options)
 		:type => [:vre, :vre,	 :storage, :vre,  :vre,     :storage,  :thermal, :thermal, :thermal, :thermal, :thermal, :thermal, :storage],
 		:fuel => [:_,   :_,      :_,       :_,    :_,       :_,        :coal,    :gas,     :gas,     :biogas,  :biogas,  :uranium, :_]
 	)
-	nstorageclasses = (4,4)		# (cost classes, reservoir classes)
+
+	path = joinpath(dirname(@__FILE__), "..")
+	hydrovars = matread("$path/inputdata/GISdata_hydro_$regionset.mat")
+	_, ncostclasses, nreservoirclasses = size(hydrovars["potentialcapac"])
 	nvreclasses = 5
 
 	numtechs = length(techdata[:name])
-	reservoirs = collect('a':'z')[1:nstorageclasses[2]]
+	reservoirs = collect('a':'z')[1:nreservoirclasses]
 	vreclass = [Symbol("$letter$number") for letter in ["a", "b"] for number = 1:nvreclasses]
-	hydroclass = [:x0;  [Symbol("$letter$number") for letter in reservoirs for number = 1:nstorageclasses[1]]]
+	hydroclass = [:x0;  [Symbol("$letter$number") for letter in reservoirs for number = 1:ncostclasses]]
 	noclass = [:_]
 	techtype = Dict(techdata[:name][i] => techdata[:type][i] for i=1:numtechs)
 	techfuel = Dict(techdata[:name][i] => techdata[:fuel][i] for i=1:numtechs)
@@ -37,7 +40,7 @@ function makesets(REGION, dataregions, hourinfo, options)
 	STORAGECLASS[:hydro] = [:x0;  Symbol.(reservoirs)]
 	STORAGECLASS[:csp] = vreclass
 
-	reservoirclass = Dict(r => [Symbol("$r$number") for number = 1:nstorageclasses[1]] for r in Symbol.(reservoirs))
+	reservoirclass = Dict(r => [Symbol("$r$number") for number = 1:ncostclasses] for r in Symbol.(reservoirs))
 	reservoirclass[:x0] = [:x0]
 	reservoirclass[:_] = [:_]
 	for vc in vreclass
