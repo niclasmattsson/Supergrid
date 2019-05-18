@@ -26,6 +26,7 @@ function defaultoptions()
         :transmissionallowed => :all,       # :none, :islands, :all
         :hours => 1,                        # 1,2,3 or 6 hours per period
         :solarwindarea => 1,                # area multiplier for GIS solar & wind potentials
+        :datayear => 2018,                  # year of the ERA5 input data (produced by GlobalEnergyGIS.jl)
         :selectdays => 1,
         :skipdays => 0,
         :solver => :cplex,

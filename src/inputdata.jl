@@ -13,6 +13,7 @@ function makesets(hourinfo, options)
 end
 
 function makesets(REGION, dataregions, hourinfo, options)
+	@unpack datayear, regionset = options
 	techdata = Dict(
 		:name => [:pv,  :pvroof, :csp,     :wind, :offwind, :hydro,	   :coal,    :gasGT,   :gasCCGT, :bioGT,   :bioCCGT, :nuclear, :battery],
 		:type => [:vre, :vre,	 :storage, :vre,  :vre,     :storage,  :thermal, :thermal, :thermal, :thermal, :thermal, :thermal, :storage],
@@ -47,7 +48,7 @@ function makesets(REGION, dataregions, hourinfo, options)
 		reservoirclass[vc] = [vc]
 	end
 
-	HOUR = 1:Int(length(hourinfo.hourindexes)/hourinfo.hours)		# later use hoursperyear() in helperfunctions
+	HOUR = 1:(24*Dates.daysinyear(datayear))
 
 	return Sets(REGION, FUEL, TECH, CLASS, STORAGECLASS, HOUR, techtype, techfuel, reservoirclass, dataregions)
 end
@@ -82,10 +83,9 @@ CRF(r,T) = r / (1 - 1/(1+r)^T)
 
 function makeparameters(sets, options, hourinfo)
 	@unpack REGION, FUEL, TECH, CLASS, HOUR, dataregions = sets
-	@unpack regionset, solarwindarea, islandindexes = options
+	@unpack datayear, regionset, solarwindarea, islandindexes = options
 
-	year = 2016
-	hoursperyear = 8760
+	hoursperyear = 24 * Dates.daysinyear(datayear)
 	hoursperperiod = Int(hourinfo.hoursperperiod)
 
 	discountrate = 0.05
@@ -174,7 +174,7 @@ function makeparameters(sets, options, hourinfo)
 	dischargetime[dischargetime .> 10000] = fill(10000, sum(dischargetime .> 10000))
 
 	# monthly to hourly hydro inflow
-	dayspermonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+	dayspermonth = Dates.daysinmonth.(Date.(datayear, 1:12))
 	lasthour = 24 ÷ hoursperperiod * cumsum(dayspermonth)
 	firsthour = [1; 1 .+ lasthour[1:end-1]]
 	for m = 1:12
@@ -259,25 +259,21 @@ function makeparameters(sets, options, hourinfo)
 	emissionsCO2[[:coal,:gas]] = [0.330, 0.202]		# kgCO2/kWh fuel (or ton/MWh or kton/GWh)
 
 	# do something with B classes (and pvrooftop) later
-	windvars = matread("$path/inputdata/GISdata_wind2016_$regionset.mat")
-	solarvars = matread("$path/inputdata/GISdata_solar2016_$regionset.mat")
+	windvars = matread("$path/inputdata/GISdata_wind$(datayear)_$regionset.mat")
+	solarvars = matread("$path/inputdata/GISdata_solar$(datayear)_$regionset.mat")
 
 	allclasses = union(sets.CLASS[:pv], sets.CLASS[:hydro], [:_])
 	cf = AxisArray(ones(numregions,length(TECH),length(allclasses),nhours), REGION, TECH, allclasses, HOUR)
 	classlimits = AxisArray(zeros(numregions,5,length(CLASS[:pv])), REGION, [:wind, :offwind, :pv, :pvroof, :csp], CLASS[:pv])
 
-	# sync wind & solar time series with demand
-	# (ignore 2016 extra leap day for now, fix this later)
-	# note first wind data is at 00:00 and first solar data is at 07:00
-	# assume first demand data is at 00:00
-	cf[:,:wind,1:5,:] = permutedims(reducehours(windvars["CFtime_windonshoreA"][25:hoursperyear+24,activeregions,:], 1, hourinfo), [2,3,1])
-	cf[:,:offwind,1:5,:] = permutedims(reducehours(windvars["CFtime_windoffshore"][25:hoursperyear+24,activeregions,:], 1, hourinfo), [2,3,1])
-	cf[:,:pv,1:5,:] = permutedims(reducehours(solarvars["CFtime_pvplantA"][18:hoursperyear+17,activeregions,:], 1, hourinfo), [2,3,1])
-	cf[:,:pvroof,1:5,:] = permutedims(reducehours(solarvars["CFtime_pvrooftop"][18:hoursperyear+17,activeregions,:], 1, hourinfo), [2,3,1])
-	cf[:,:csp,1:5,:] = permutedims(reducehours(solarvars["CFtime_cspplantA"][18:hoursperyear+17,activeregions,:], 1, hourinfo), [2,3,1])
-	cf[:,:wind,6:10,:] = permutedims(reducehours(windvars["CFtime_windonshoreB"][25:hoursperyear+24,activeregions,:], 1, hourinfo), [2,3,1])
-	cf[:,:pv,6:10,:] = permutedims(reducehours(solarvars["CFtime_pvplantB"][18:hoursperyear+17,activeregions,:], 1, hourinfo), [2,3,1])
-	cf[:,:csp,6:10,:] = permutedims(reducehours(solarvars["CFtime_cspplantB"][18:hoursperyear+17,activeregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:wind,1:5,:] = permutedims(reducehours(windvars["CFtime_windonshoreA"][:,activeregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:offwind,1:5,:] = permutedims(reducehours(windvars["CFtime_windoffshore"][:,activeregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:pv,1:5,:] = permutedims(reducehours(solarvars["CFtime_pvplantA"][:,activeregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:pvroof,1:5,:] = permutedims(reducehours(solarvars["CFtime_pvrooftop"][:,activeregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:csp,1:5,:] = permutedims(reducehours(solarvars["CFtime_cspplantA"][:,activeregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:wind,6:10,:] = permutedims(reducehours(windvars["CFtime_windonshoreB"][:,activeregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:pv,6:10,:] = permutedims(reducehours(solarvars["CFtime_pvplantB"][:,activeregions,:], 1, hourinfo), [2,3,1])
+	cf[:,:csp,6:10,:] = permutedims(reducehours(solarvars["CFtime_cspplantB"][:,activeregions,:], 1, hourinfo), [2,3,1])
 	cf[isnan.(cf)] = zeros(sum(isnan.(cf)))
 	cf[cf .< 0.01] = zeros(sum(cf .< 0.01))		# set small values to 0 for better numerical stability
 
