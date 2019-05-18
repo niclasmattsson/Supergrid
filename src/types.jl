@@ -42,6 +42,7 @@ struct Vars
 	CO2emissions				::JuMP.JuMPArray{JuMP.Variable,1}
 	FuelUse						::JuMP.JuMPArray{JuMP.Variable,2}
 	Electricity					::JuMP.JuMPDict{JuMP.Variable,4}
+	AnnualGeneration			::JuMP.JuMPArray{JuMP.Variable,2}
 	Charging					::JuMP.JuMPDict{JuMP.Variable,3}
 	StorageLevel				::JuMP.JuMPDict{JuMP.Variable,4}
 	Transmission				::JuMP.JuMPArray{JuMP.Variable,3}
@@ -63,6 +64,7 @@ struct Constraints
 	NoTransmission
 	NoHydroCharging
 	ChargingNeedsBattery
+	Calculate_AnnualGeneration
 	Calculate_FuelUse
 	TotalCO2
 	Totalcosts

@@ -26,6 +26,7 @@ function makevariables(m, sets)
 		CO2emissions[r in REGION]														# kton CO2/year
 		FuelUse[r in REGION, f in FUEL]	>= 0											# GWh fuel/year
 		Electricity[r in REGION, k in TECH, c in CLASS[k], h in HOUR] >= 0				# GWh elec/period
+		AnnualGeneration[r in REGION, k in TECH] >= 0									# GWh elec/year
 		Charging[r in REGION, k in TECH, h in HOUR; techtype[k] == :storage] >= 0		# GWh elec/period (electricity used to charge)
 		StorageLevel[r in REGION, k in TECH, c in STORAGECLASS[k], h in HOUR; techtype[k] == :storage] >= 0	 # TWh elec (in storage)
 		Transmission[r1 in REGION, r2 in REGION, h in HOUR] >= 0						# GWh elec/period
@@ -33,7 +34,8 @@ function makevariables(m, sets)
 		Capacity[r in REGION, k in TECH, c in CLASS[k]] >= 0							# GW elec
 	end #variables
 
-	return Vars(Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, TransmissionCapacity, Capacity)
+	return Vars(Systemcost, CO2emissions, FuelUse, Electricity, AnnualGeneration, Charging, StorageLevel,
+					Transmission, TransmissionCapacity, Capacity)
 end
 
 function setbounds(sets, params, vars, options)
@@ -78,7 +80,8 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 	@unpack cf, transmissionlosses, demand, cfhydroinflow, efficiency, rampingrate, dischargetime, initialstoragelevel,
 			minflow_existinghydro, emissionsCO2, fuelcost, variablecost, smalltransmissionpenalty, investcost, crf, fixedcost,
 			transmissioninvestcost, transmissionfixedcost, hydroeleccost = params
-	@unpack Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, TransmissionCapacity, Capacity = vars
+	@unpack Systemcost, CO2emissions, FuelUse, Electricity, AnnualGeneration, Charging, StorageLevel,
+			Transmission, TransmissionCapacity, Capacity = vars
 	@unpack hoursperperiod = hourinfo
 	@unpack carbontax, carboncap, rampingconstraints, maxbioenergy, globalnuclearlimit = options
 
@@ -128,11 +131,14 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 		NoTransmission[r1 in REGION, r2 in REGION; transmissioninvestcost[r1,r2] == 0],
 			TransmissionCapacity[r1,r2] == 0
 
+		Calculate_AnnualGeneration[r in REGION, k in TECH],
+			AnnualGeneration[r,k] == sum(Electricity[r,k,c,h] for c in CLASS[k], h in HOUR)
+
 		Calculate_FuelUse[r in REGION, f in FUEL; f != :_],
-			FuelUse[r,f] == sum(Electricity[r,k,c,h]/efficiency[k] for k in TECH, c in CLASS[k], h in HOUR if techfuel[k]==f)
+			FuelUse[r,f] == sum(AnnualGeneration[r,k]/efficiency[k] for k in TECH if techfuel[k]==f)
 
 		BioLimit[r in REGION],
-			FuelUse[r,:biogas] <= maxbioenergy * sum(demand[r,h] for h in HOUR) * hoursperperiod / efficiency[:bioCCGT]
+			sum(AnnualGeneration[r,k] for k in [:bioGT, :bioCCGT]) <= maxbioenergy * sum(demand[r,h] for h in HOUR) * hoursperperiod
 
 		TotalCO2[r in REGION],
 			CO2emissions[r] == sum(FuelUse[r,f] * emissionsCO2[f] for f in FUEL)
@@ -178,8 +184,8 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 	end
 
 	return Constraints(ElecCapacity, ElecDemand, RampingDown, RampingUp, StorageBalance, MaxStorageCapacity, InitialStorageLevel,
-				MaxTransmissionCapacity, TwoWayStreet, NoTransmission, NoCharging, ChargingNeedsBattery, Calculate_FuelUse,
-				TotalCO2, Totalcosts)
+				MaxTransmissionCapacity, TwoWayStreet, NoTransmission, NoCharging, ChargingNeedsBattery,
+				Calculate_AnnualGeneration, Calculate_FuelUse, TotalCO2, Totalcosts)
 end
 
 function makeobjective(m, sets, vars)
