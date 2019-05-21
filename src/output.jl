@@ -191,7 +191,7 @@ function analyzeresults(results::Results)
 			colors = [palette[findfirst(displaytechs .== k)]; RGB(0.9,0.9,0.9)]
 			used = [sum(Capacity[r,k,c] for r in REGION[regs]) for c in CLASS[k]]
 			lims = [sum(k == :hydro ? hydrocapacity[r,c] : classlimits[r,k,c] for r in REGION[regs]) for c in CLASS[k]]
-			groupedbar!(String.(CLASS[k]), [used lims-used], subplot=i, bar_position = :stack, line=0, color_palette=colors)
+			groupedbar!(String.(CLASS[k]), [used lims-used], subplot=i, title=k, bar_position = :stack, line=0, color_palette=colors)
 		end
 		display(composite)
 
