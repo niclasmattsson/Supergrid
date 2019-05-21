@@ -4,7 +4,7 @@ export runmodel, buildmodel, readresults, saveresults, analyzeresults, listresul
         fix_timezone_error
 
 #println("Importing packages...")
-using JuMP, CPLEX, Gurobi, Parameters, AxisArrays, Plots, JLD2, Statistics
+using JuMP, CPLEX, Gurobi, GLPKMathProgInterface, GLPK, Clp, Parameters, AxisArrays, Plots, JLD2, Statistics
 
 include("helperfunctions.jl")
 include("types.jl")
@@ -91,8 +91,12 @@ end
 function runmodel(; name="", group="", optionlist...)       # carbon tax in €/ton CO2
     model = buildmodel(; optionlist...)
 
-    println("\nSolving model...")
     #writeMPS(model, "model3.mps")
+    if model.options[:solver] == :cplex
+        println("\nSolving model using CPLEX version $(CPLEX.version())...")
+    else
+        println("\nSolving model...")
+    end
 
     status = solve(model.modelname)
     println("\nSolve status: $status")

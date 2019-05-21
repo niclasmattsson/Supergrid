@@ -12,8 +12,12 @@ function initjumpmodel(options)
 	elseif solver == :gurobi
 		m = Model(solver=GurobiSolver(Method=2, Threads=threads, NumericFocus=2, ScaleFlag=3, Crossover=0))
 					# OptimalityTol=1e-9, FeasibilityTol=1e-9, NumericFocus=0-3, ScaleFlag=-1-3, Crossover=0
+	elseif solver == :glpk
+		m = Model(solver=GLPKSolverLP(method=:InteriorPoint, msg_lev=GLPK.MSG_ON))
+	elseif solver == :clp
+		m = Model(solver=ClpSolver(SolveType=4, LogLevel=4))
 	else
-		m = Model(solver=ClpSolver())
+		println("No solver installed called $solver.")
 	end
 	return m
 end
