@@ -48,7 +48,7 @@ function makesets(REGION, dataregions, hourinfo, options)
 		reservoirclass[vc] = [vc]
 	end
 
-	HOUR = 1:(24*Dates.daysinyear(datayear))
+	HOUR = 1:(24*Dates.daysinyear(datayear)÷hourinfo.hours)
 
 	return Sets(REGION, FUEL, TECH, CLASS, STORAGECLASS, HOUR, techtype, techfuel, reservoirclass, dataregions)
 end
