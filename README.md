@@ -1,17 +1,22 @@
-# Supergrid
+# Supergrid.jl
 
 A capacity expansion model of the electricity system for arbitrary world regions, written in Julia 1.x.
 
 ## Installation
 
-Type `]` to enter Julia's package mode, then:
+First, install the [CPLEX](https://ibm.onthehub.com/WebStore/ProductSearchOfferingList.aspx?srch=cplex) and/or [Gurobi](https://user.gurobi.com/download/licenses/free-academic) solvers on your system and make sure that they work at the command prompt and are properly licensed. Both are free for academic use (students or faculty).
+
+Next, type `]` to enter Julia's package mode, then:
 
 ```
-(v1.1) pkg> add https://github.com/halleysfifthinc/MAT.jl#v0.7-update
+(v1.1) pkg> add JuMP@0.18.5
+
+(v1.1) pkg> add AxisArrays
 
 (v1.1) pkg> add https://github.com/niclasmattsson/Supergrid
-``` 
-That first line may take several minutes to run (during the building step). Hopefully it won't be needed in the near future, but include it for now.
+```
+
+Grab some coffee, because installing and compiling dependencies can take quite some time to run.
 
 ## Running the model
 

@@ -111,7 +111,13 @@ function makeparameters(sets, options, hourinfo)
 
 	# read synthetic demand data (using local time) and shift to UTC
 	# (note: not currently based on same year as solar & wind data!!!)
-	# if time zone code errors then run TimeZones.TZData.compile(max_year=2200), see https://timezonesjl.readthedocs.io/en/stable/faq/
+	# If time zone code errors then do the following, see https://timezonesjl.readthedocs.io/en/stable/faq/
+	# The error:
+	#		ERROR: UnhandledTimeError: TimeZone Europe/Oslo does not handle dates on or after 2038-03-28T01:00:00 UTC
+	# The fix:
+	#		Pkg.add("TimeZones")
+	# 		using TimeZones
+	# 		TimeZones.TZData.compile(max_year=2200)
 	if regionset == :europe8		# Generalize this later, maybe in GIS preprocessing.
 		zones = ["Europe/Oslo","Europe/Paris","Europe/Berlin","Europe/London","Europe/Rome","Europe/Warsaw","Europe/Madrid","Europe/Budapest"]
 	elseif regionset == :eurasia21
