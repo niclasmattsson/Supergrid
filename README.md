@@ -32,16 +32,18 @@ If you forget the last semicolon a **LOT** of results will get dumped to the con
 
 ```
 defaultoptions() = Dict(
-        :regionset => :europe8,             # :eurasia21, :europe8
+        :regionset => :Eurasia21,           # :eurasia21, :europe8
+        :islandindexes => [],               # superregion groupings, defaults to [1:8, 9:15, 16:21] for eurasia21, [] for europe8
         :carbontax => 0.0,                  # €/ton CO2
         :carboncap => 1.0,                  # global cap in kg CO2/kWh elec  (BAU scenario: ~0.5 kgCO2/kWh elec)
-        :maxbioenergy => 0.05,              # max share of biofuel of annual regional electricity demand (assuming CCGT, less if GT) 
+        :maxbioenergy => 0.05,              # max share of biofuel of annual regional electricity demand (assuming CCGT, less if GT)
         :nuclearallowed => true,
         :globalnuclearlimit => Inf,         # maximum total nuclear capacity in all regions (GW)
         :hydroinvestmentsallowed => false,
         :transmissionallowed => :all,       # :none, :islands, :all
         :hours => 1,                        # 1,2,3 or 6 hours per period
         :solarwindarea => 1,                # area multiplier for GIS solar & wind potentials
+        :datayear => 2018,                  # year of the ERA5 input data (produced by GlobalEnergyGIS.jl)
         :selectdays => 1,
         :skipdays => 0,
         :solver => :cplex,
@@ -51,7 +53,6 @@ defaultoptions() = Dict(
         :rampingcosts => false,
         :disabletechs => [],
         :disableregions => [],
-        :islandindexes => [],               # Defining "superregions", e.g. use [1:8, 9:15, 16:21] for eurasia21
         :resultsfile => "results.jld2"      # use "" to skip saving the results in the database
     )
 ```
