@@ -216,12 +216,12 @@ function makeparameters(sets, options, hourinfo)
 	end
 	transmissionislands = AxisArray(islands[activeregions,activeregions], REGION, REGION)
 
-	# PV and battery costs have high/mid/low costs:  high = 1.5*mid, low = 0.5*mid
+	# Efficiencies for storage technologies are round trip efficiencies.
 	techtable = [
 		#				investcost 	variablecost	fixedcost	lifetime	efficiency	rampingrate
 		#				€/kW		€/MWh elec		€/kW/year	years					share of capacity per hour
 		:gasGT			500			1				10			30			0.4			1
-		:gasCCGT		800			1				16			30			0.6			0.3
+		:gasCCGT			800			1				16			30			0.6			0.3
 		:coal			1600		2				48			30			0.45		0.15
 		:bioGT			500			1				10			30			0.4			1
 		:bioCCGT		800			1				16			30			0.6			0.3
@@ -229,7 +229,7 @@ function makeparameters(sets, options, hourinfo)
 		:wind			1200		0				60			25			1			1
 		:offwind		2400		0				120			25			1			1
 		:transmission	NaN			0				NaN			50			NaN			1
-		:battery		150			0.1				1.5			10			0.9			1	# 1h discharge time, 150 €/kW = 150 €/kWh
+		:battery		150			0.1				1.5			10			0.81		1	# 1h discharge time, 150 €/kW = 150 €/kWh
 		:pv				800			0				16			25			1			1
 		:pvroof			1000		0				20			25			1			1
 		:csp			3500		0				35			30			1			1	# adjust investcost for solar multiple below

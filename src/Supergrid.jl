@@ -3,7 +3,6 @@ module Supergrid
 export runmodel, buildmodel, readresults, saveresults, analyzeresults, listresults, loadresults, makesets, makeparameters,
         fix_timezone_error
 
-#println("Importing packages...")
 using JuMP, CPLEX, Gurobi, GLPKMathProgInterface, GLPK, Clp, Parameters, AxisArrays, Plots, JLD2, Statistics
 
 include("helperfunctions.jl")
@@ -16,7 +15,7 @@ include("iewruns.jl")
 function defaultoptions()
     defaults = Dict(
         :regionset => :Eurasia21,           # :eurasia21, :europe8
-        :islandindexes => [],               # superregion groupings: [1:8, 9:15, 16:21] for eurasia21, [] for europe8
+        :islandindexes => [],               # superregion groupings, defaults to [1:8, 9:15, 16:21] for eurasia21, [] for europe8
         :carbontax => 0.0,                  # €/ton CO2
         :carboncap => 1.0,                  # global cap in kg CO2/kWh elec  (BAU scenario: ~0.5 kgCO2/kWh elec)
         :maxbioenergy => 0.05,              # max share of biofuel of annual regional electricity demand (assuming CCGT, less if GT) 
