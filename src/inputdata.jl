@@ -35,7 +35,10 @@ function makesets(REGION, dataregions, hourinfo, options)
 
 	TECH = techdata[:name]
 	FUEL = [:_, :coal, :gas, :biogas, :uranium]
-	CLASS = Dict(k => k == :hydro ? hydroclass : techtype[k] == :vre || k == :csp ? vreclass : noclass for k in TECH)
+	CLASS = Dict(k =>
+		k == :hydro ? hydroclass :
+		k == :csp || techtype[k] == :vre ? vreclass :
+		noclass for k in TECH)
 	CLASS[:transmission] = noclass
 	STORAGECLASS = Dict(k => [:_] for k in TECH)
 	STORAGECLASS[:hydro] = [:x0;  Symbol.(reservoirs)]
@@ -83,12 +86,11 @@ CRF(r,T) = r / (1 - 1/(1+r)^T)
 
 function makeparameters(sets, options, hourinfo)
 	@unpack REGION, FUEL, TECH, CLASS, HOUR, dataregions = sets
-	@unpack datayear, regionset, solarwindarea, islandindexes = options
+	@unpack discountrate, datayear, regionset, solarwindarea, islandindexes, inputdatasuffix = options
 
 	hoursperyear = 24 * Dates.daysinyear(datayear)
 	hoursperperiod = Int(hourinfo.hoursperperiod)
 
-	discountrate = 0.05
 	initialstoragelevel = 0.7		# make this tech dependent later
 	minflow_existinghydro = 0.4
 	cspsolarmultiple = 3.0			# peak capacity of collectors divided by turbine power
@@ -118,9 +120,11 @@ function makeparameters(sets, options, hourinfo)
 	#		Pkg.add("TimeZones")
 	# 		using TimeZones
 	# 		TimeZones.TZData.compile(max_year=2200)
-	if regionset == :europe8		# Generalize this later, maybe in GIS preprocessing.
+	if lowercase(string(regionset)) == "europe8"		# Generalize this later, maybe in GIS preprocessing.
 		zones = ["Europe/Oslo","Europe/Paris","Europe/Berlin","Europe/London","Europe/Rome","Europe/Warsaw","Europe/Madrid","Europe/Budapest"]
-	elseif regionset == :eurasia21
+	elseif lowercase(string(regionset)) == "china6"
+		zones = ["Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai"]	
+	elseif lowercase(string(regionset)) == "eurasia21"
 		zones = ["Europe/Oslo","Europe/Paris","Europe/Berlin","Europe/London","Europe/Rome","Europe/Warsaw","Europe/Madrid","Europe/Budapest","Europe/Sofia","Europe/Istanbul","Asia/Almaty","Asia/Ashgabat","Europe/Moscow","Europe/Moscow","Europe/Moscow","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai"]	
 	else
 		error("Need to add time zone info for $regionset.")
@@ -129,7 +133,8 @@ function makeparameters(sets, options, hourinfo)
 	utc = [ZonedDateTime(h, TimeZone("UTC")) for h in hourrange]
 	for (i,reg) in enumerate(REGION)
 		dataregionindex = findfirst(dataregions .== reg)
-		data = readdlm("$path/inputdata/syntheticdemand/synthetic2050_region$(dataregionindex)_$reg.csv", ',')
+		regionmod = lowercase(string(regionset)) == "china6" ? 15 : 0	# use eurasia21 demand files for now
+		data = readdlm("$path/inputdata/syntheticdemand/synthetic2050_region$(dataregionindex+regionmod)_$reg.csv", ',')
 		demandlocaltime = data[2:end, 2]
 		timezone = TimeZone(zones[dataregionindex])
 		localtime = [astimezone(ut, timezone) for ut in utc]
@@ -265,8 +270,8 @@ function makeparameters(sets, options, hourinfo)
 	emissionsCO2[[:coal,:gas]] = [0.330, 0.202]		# kgCO2/kWh fuel (or ton/MWh or kton/GWh)
 
 	# do something with B classes (and pvrooftop) later
-	windvars = matread("$path/inputdata/GISdata_wind$(datayear)_$regionset.mat")
-	solarvars = matread("$path/inputdata/GISdata_solar$(datayear)_$regionset.mat")
+	windvars = matread("$path/inputdata/GISdata_wind$(datayear)_$regionset$inputdatasuffix.mat")
+	solarvars = matread("$path/inputdata/GISdata_solar$(datayear)_$regionset$inputdatasuffix.mat")
 
 	allclasses = union(sets.CLASS[:pv], sets.CLASS[:hydro], [:_])
 	cf = AxisArray(ones(numregions,length(TECH),length(allclasses),nhours), REGION, TECH, allclasses, HOUR)
