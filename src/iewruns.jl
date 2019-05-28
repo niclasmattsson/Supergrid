@@ -158,6 +158,16 @@ function IEWruns3(hourinterval)
 	results, allstatus
 end
 
+function IEWruns_gispaper_mixes()
+	for region in [:China6, :Europe8]
+		for landsuffix in ["", "_landx4"]
+			println("\n\n\nNew run: region=$region, landscenariosuffix=$landsuffix.")
+			runmodel(regionset=region, carboncap=0.025, discountrate=0.07,
+							nuclearallowed=false, inputdatasuffix=landsuffix, resultsfile="results_gispaper_mixes.jld2");
+		end
+	end
+end
+
 function mergeresults()
 	# @load "iewcosts1_0.jld2" resultslist allstatus
 	# res0, st0 = resultslist, allstatus
@@ -332,7 +342,7 @@ function plotiew_land_energymix()
 end
 
 function plotiew_energymix(scen, resultsnames, resultsfile)
-	scenelec, demands, hoursperperiod, displayorder, techlabels = getscenresults(scen, resultsnames, resultsfile)
+	scenelec, demands, hoursperperiod, displayorder, techlabels = iew_getscenarioresults(scen, resultsnames, resultsfile)
 
 	palette = [RGB([216,137,255]/255...), RGB([119,112,71]/255...), RGB([199,218,241]/255...), RGB([149,179,215]/255...),
 		RGB([255,255,64]/255...), RGB([240,224,0]/255...), RGB([214,64,64]/255...), RGB([255,192,0]/255...), RGB([99,172,70]/255...),
@@ -346,7 +356,7 @@ function plotiew_energymix(scen, resultsnames, resultsfile)
 	nothing
 end
 
-function readscenariodata(resultname, resultsfile)
+function iew_readscenariodata(resultname, resultsfile)
 	println(resultname, " ", resultsfile)
 	results = loadresults(resultname, resultsfile=resultsfile)
 	@unpack TECH, REGION, CLASS, HOUR = results.sets
@@ -354,21 +364,22 @@ function readscenariodata(resultname, resultsfile)
 	totaldemand = sum(results.params[:demand])
 	totalelec = [sum(sum(results.Electricity[k,c]) for c in CLASS[k]) for k in TECH]
 
-	displaytechs = [:nuclear, :coal, :wind, :offwind, :pv, :pvroof, :csp, :gasCCGT, :bioCCGT, :hydro, :bioGT, :gasGT, :battery]
-	techlabels = [k for r=1:1, k in displaytechs]
-	displayorder = [i for (i,k) in enumerate(TECH), d in displaytechs if d == k]
+	techdisplayorder = [:nuclear, :coal, :wind, :offwind, :pv, :pvroof, :csp, :gasCCGT, :bioCCGT, :hydro, :bioGT, :gasGT, :battery]
+	techlabels = [k for r=1:1, k in techdisplayorder]
+	displayorder = [i for (i,k) in enumerate(TECH), d in techdisplayorder if d == k]
 
 	return totalelec, totaldemand, hoursperperiod, displayorder, techlabels
 end
 
-function getscenresults(scen, resultsnames, resultsfile)
-	scenelec = zeros(13,length(scen))
-	demands = zeros(length(scen))
+function iew_getscenarioresults(scenarios, resultsnames, resultsfile)
+	numscen = length(scenarios)
+	scenelec = zeros(13,numscen)
+	demands = zeros(numscen)
 	hoursperperiod, displayorder, techlabels = nothing, nothing, nothing
 
-	for (i,s) in enumerate(scen)
+	for (i,s) in enumerate(scenarios)
 		println("Loading results: $s...")
-		totalelec, totaldemand, hoursperperiod, displayorder, techlabels = readscenariodata(resultsnames[i], resultsfile)
+		totalelec, totaldemand, hoursperperiod, displayorder, techlabels = iew_readscenariodata(resultsnames[i], resultsfile)
 		scenelec[:,i] = totalelec
 		demands[i] = totaldemand
 	end
