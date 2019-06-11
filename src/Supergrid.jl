@@ -1,7 +1,7 @@
 module Supergrid
 
 export runmodel, buildmodel, readresults, saveresults, analyzeresults, listresults, loadresults, makesets, makeparameters,
-        fix_timezone_error
+        fix_timezone_error, chart_energymix_scenarios
 
 using JuMP, CPLEX, Gurobi, GLPKMathProgInterface, GLPK, Clp, Parameters, AxisArrays, Plots, JLD2, Statistics
 

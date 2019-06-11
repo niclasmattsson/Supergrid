@@ -168,6 +168,28 @@ function IEWruns_gispaper_mixes()
 	end
 end
 
+function plotiew_gispaper_mixes()
+	scen = ["Europe-default", "Europe-highland", "China-default", "China-highland"]
+	resultsnames = ["regionset=Europe8, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2",
+					"regionset=Europe8, discountrate=0.07, inputdatasuffix=_landx4, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2",
+					"regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2",
+					"regionset=China6, discountrate=0.07, inputdatasuffix=_landx4, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2"]
+	resultsfile = "results_gispaper_mixes.jld2"
+	chart_energymix_scenarios(scen, resultsnames, resultsfile)
+end
+
+function plotiew_gispaper_mixes2()
+	scen = ["default", "high land"]
+	resultsnames = ["regionset=Europe8, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2",
+					"regionset=Europe8, discountrate=0.07, inputdatasuffix=_landx4, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2"]
+	resultsfile = "results_gispaper_mixes.jld2"
+	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), title="Europe")
+	scen = ["default", "high land"]
+	resultsnames = ["regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2",
+					"regionset=China6, discountrate=0.07, inputdatasuffix=_landx4, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2"]
+	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), title="China")
+end
+
 function mergeresults()
 	# @load "iewcosts1_0.jld2" resultslist allstatus
 	# res0, st0 = resultslist, allstatus
