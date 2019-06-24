@@ -1,6 +1,6 @@
 # Supergrid.jl
 
-A capacity expansion model of the electricity system for arbitrary world regions, written in Julia 1.x.
+A capacity expansion model of the electricity system for arbitrary world regions, written in Julia.
 
 ## Installation
 
