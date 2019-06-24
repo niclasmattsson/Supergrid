@@ -166,6 +166,9 @@ function IEWruns_gispaper_mixes()
 							nuclearallowed=false, inputdatasuffix=landsuffix, resultsfile="results_gispaper_mixes.jld2");
 		end
 	end
+	println("\n\n\nNew run: region=$region, no transmission.")
+	runmodel(regionset=:europe8, carboncap=0.025, discountrate=0.07,
+				nuclearallowed=false, transmissionallowed=:none, resultsfile="results_gispaper_mixes.jld2");
 end
 
 function plotiew_gispaper_mixes()
@@ -188,6 +191,14 @@ function plotiew_gispaper_mixes2()
 	resultsnames = ["regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2",
 					"regionset=China6, discountrate=0.07, inputdatasuffix=_landx4, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2"]
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), title="China")
+end
+
+function plotiew_gispaper_mixes3()
+	scen = ["default", "no transmission"]
+	resultsnames = ["regionset=Europe8, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2",
+					"regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2"]
+	resultsfile = "results_gispaper_mixes.jld2"
+	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), title="Europe")
 end
 
 function mergeresults()

@@ -252,6 +252,8 @@ function chart_energymix_scenarios(scenarios, resultsnames, resultsfile; size=(9
 	numscen = length(scenarios)
 	scenelec, demands, hoursperperiod, displayorder, techlabels, palette = allscenarioresults(scenarios, resultsnames, resultsfile)
 
+	println("Share of demand (%):")
+	display(reverse(permutedims([techlabels; round.(scenelec[displayorder,:]'./demands .* 100, digits=1)]), dims=1))
 	groupedbarflip(collect(scenelec[displayorder,:]')/1e3, label=techlabels, bar_position = :stack, size=size,
 			left_margin=20px, xticks=(1:numscen,scenarios), line=0, tickfont=12, legendfont=12, guidefont=12,
 			color_palette=palette, ylabel="[TWh/year]", yformatter=:plain; options...)
