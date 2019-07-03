@@ -14,8 +14,9 @@ include("iewruns.jl")
 
 function defaultoptions()
     defaults = Dict(
-        :regionset => :Eurasia21,           # :eurasia21, :europe8
-        :inputdatasuffix => "",             # e.g. "_landx2" to read solar input data "GISdata_solar2018_Europe8_landx2.mat" 
+        :regionset => :Eurasia21,           # :Eurasia21, :Europe8
+        :inputdatasuffix => "",             # e.g. "_landx2" to read solar input data "GISdata_solar2018_Europe8_landx2.mat"
+        :runname => "",                     # change the run name without changing run parameters (e.g. if you modify the code)
         :islandindexes => [],               # superregion groupings, defaults to [1:8, 9:15, 16:21] for eurasia21, [] for europe8
         :carbontax => 0.0,                  # €/ton CO2
         :carboncap => 1.0,                  # global cap in kg CO2/kWh elec  (BAU scenario: ~0.5 kgCO2/kWh elec)
@@ -39,7 +40,7 @@ function defaultoptions()
         :disableregions => [],
         :resultsfile => "results.jld2"      # use "" to skip saving the results in the database
     )
-    if defaults[:regionset] == :eurasia21 && isempty(defaults[:islandindexes])
+    if defaults[:regionset] == :Eurasia21 && isempty(defaults[:islandindexes])
         defaults[:islandindexes] = [1:8, 9:15, 16:21]    # change defaults for eurasia21
     end
     return defaults
