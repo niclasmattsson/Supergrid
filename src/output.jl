@@ -156,12 +156,14 @@ function analyzeresults(results::Results)
 			regcost = Systemcost ./ vec(sum(annualelec, dims=1)[1:end-1]) * 1000
 			totcost = sum(Systemcost) / sum(annualelec[:,:TOTAL]) * 1000
 			lcoe = NamedArray(collect([regcost; totcost]'), (["system cost (€/MWh)"], [REGION; :TOTAL]))
-			display(lcoe)
+			println("Regional system cost per MWh generated (€/MWh):")
+			display(round.(lcoe, digits=2))
 
 			groupedbar(String.(REGION),collect(annualelec[displayorder,1:end-1]'/1000), labels=techlabels,
-				bar_position=:stack, size=(1200,600), line=0, tickfont=14, legendfont=14, color_palette=palette,
+				bar_position=:stack, size=(1850,950), line=0, tickfont=14, legendfont=14, color_palette=palette,
 				yformatter=:plain)
-			lr = length(REGION)
+
+			lr = length(REGION)			
 			xpos = (1:lr)' .- 0.5
 			display(plot!([xpos; xpos], [zeros(lr)'; sum(demand,dims=2)'*hoursperperiod/1000], line=3, color=:black, labels=permutedims(repeat([""],lr))))
 			if lr == 21
@@ -172,6 +174,10 @@ function analyzeresults(results::Results)
 				xpos = (1:4)' .- 0.5
 				totdemand = [sum(demand[1:8,:]) sum(demand[9:15,:]) sum(demand[16:21,:]) sum(demand)]
 				display(plot!([xpos; xpos], [zeros(4)'; totdemand*hoursperperiod/1e3], line=3, color=:black, labels=permutedims(repeat([""],4))))
+				totcost2 = [sum(Systemcost[1:8]) sum(Systemcost[9:15]) sum(Systemcost[16:21]) sum(Systemcost)]
+				lcoe_tot = NamedArray(totcost2./totdemand * 1000, (["system cost (€/MWh)"], ["EU","CAS","China","TOTAL"]))
+				println("\nSystem cost per MWh demand (€/MWh):")
+				display(round.(lcoe_tot, digits=2))
 			else
 				groupedbar(["TOTAL"],collect(annualelec[displayorder,:TOTAL]')/1e3, labels=techlabels, left_margin=30px,
 						bar_position=:stack, size=(350,600), line=0, tickfont=14, legendfont=14, color_palette=palette,
@@ -229,7 +235,7 @@ function analyzeresults(results::Results)
 		reglevel = sumdimdrop(level[:,regs], dims=2)
 		# display(plot(HOUR,[regcharge regelec[:,12] reglevel],size=(1850,950)))
 
-		stackedarea(HOUR, regelec, labels=techlabels, size=(1200,600), line=0, tickfont=16, legendfont=16, color_palette=palette)
+		stackedarea(HOUR, regelec, labels=techlabels, size=(1850,950), line=0, tickfont=16, legendfont=16, color_palette=palette)
 		plotbatterycharge && plot!(HOUR, -regcharge, color=RGB([157,87,205]/255...))
 		plotbatterylevel && plot!(HOUR, reglevel, line=(:black,:dash))
 		# plot!(HOUR, regdischarge, color=:green)
@@ -252,8 +258,10 @@ function chart_energymix_scenarios(scenarios, resultsnames, resultsfile; size=(9
 	numscen = length(scenarios)
 	scenelec, demands, hoursperperiod, displayorder, techlabels, palette = allscenarioresults(scenarios, resultsnames, resultsfile)
 
-	println("Share of demand (%):")
-	display(reverse(permutedims([techlabels; round.(scenelec[displayorder,:]'./demands .* 100, digits=1)]), dims=1))
+	println("\nShare of demand (%):")
+	demshare = [techlabels "-"; round.(scenelec[displayorder,:]'./demands .* 100, digits=1)  scenarios]
+	display(reverse(permutedims(demshare), dims=1))
+
 	groupedbarflip(collect(scenelec[displayorder,:]')/1e3, label=techlabels, bar_position = :stack, size=size,
 			left_margin=20px, xticks=(1:numscen,scenarios), line=0, tickfont=12, legendfont=12, guidefont=12,
 			color_palette=palette, ylabel="[TWh/year]", yformatter=:plain; options...)
@@ -271,7 +279,7 @@ function allscenarioresults(scenarios, resultsnames, resultsfile)
 	hoursperperiod, displayorder, techlabels, palette = nothing, nothing, nothing, nothing
 
 	for (i,s) in enumerate(scenarios)
-		println("Loading results: $s...")
+		println("\nLoading results: $s...")
 		totalelec, totaldemand, hoursperperiod, displayorder, techlabels, palette =
 				readscenariodata(resultsnames[i], resultsfile)
 		scenelec[:,i] = totalelec
@@ -281,8 +289,14 @@ function allscenarioresults(scenarios, resultsnames, resultsfile)
 end
 
 function readscenariodata(resultname, resultsfile)
-	println(resultname, " ", resultsfile)
+	println(resultname, ": ", resultsfile)
 	results = loadresults(resultname, resultsfile=resultsfile)
+
+	annualelec, capac, tcapac, chart = analyzeresults(results);
+	chart(:BARS)
+	println()
+	display(round.(Int, tcapac))
+
 	@unpack TECH, REGION, CLASS, HOUR = results.sets
 	hoursperperiod = results.hourinfo.hoursperperiod
 	totaldemand = sum(results.params[:demand])
