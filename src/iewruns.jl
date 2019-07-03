@@ -171,6 +171,26 @@ function IEWruns_gispaper_mixes()
 				nuclearallowed=false, transmissionallowed=:none, resultsfile="results_gispaper_mixes.jld2");
 end
 
+function solarruns()
+	# runmodel(regionset=:Eurasia21, carboncap=0.01, transmissionallowed=:none, nuclearallowed=false, solarwindarea=4);
+	# runmodel(regionset=:Eurasia21, carboncap=0.01, transmissionallowed=:islands, nuclearallowed=false, solarwindarea=4);
+	runmodel(regionset=:Eurasia21, carboncap=0.01, transmissionallowed=:all, nuclearallowed=false, solarwindarea=4);
+	runmodel(regionset=:Eurasia21, carboncap=0.01, transmissionallowed=:all, nuclearallowed=false, solarwindarea=4,
+				disabletechs=[:wind, :offwind]);
+end
+
+function plotsolarruns()
+	scen = ["none", "islands", "all", "all - no wind", "all - CSPx1", "all - no CSP"]
+	resultsnames = ["transmissionallowed=none, nuclearallowed=false, carboncap=0.01, solarwindarea=4",
+					"transmissionallowed=islands, nuclearallowed=false, carboncap=0.01, solarwindarea=4",
+					"nuclearallowed=false, carboncap=0.01, solarwindarea=4",
+					"nuclearallowed=false, carboncap=0.01, solarwindarea=4, disabletechs=Symbol[:wind, :offwind]",
+					"outputsuffix=_CSPx1, nuclearallowed=false, carboncap=0.01, resultsfile=solarresults.jld2, solarwindarea=4, disabletechs=Symbol[:wind, :offwind]",
+					"nuclearallowed=false, carboncap=0.01, resultsfile=solarresults.jld2, solarwindarea=4, disabletechs=Symbol[:wind, :offwind, :csp]"]
+	resultsfile = "solarresults.jld2"
+	chart_energymix_scenarios(scen, resultsnames, resultsfile)
+end
+
 function plotiew_gispaper_mixes()
 	scen = ["Europe-default", "Europe-highland", "China-default", "China-highland"]
 	resultsnames = ["regionset=Europe8, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2",
