@@ -45,7 +45,7 @@ end
 function setbounds(sets, params, vars, options)
 	@unpack REGION, TECH, CLASS, techtype = sets
 	@unpack Capacity, TransmissionCapacity = vars
-	@unpack classlimits, hydrocapacity, transmissionislands = params
+	@unpack classlimits, hydrocapacity, transmissionislands, demand = params
 	@unpack hydroinvestmentsallowed, nuclearallowed, transmissionallowed, disabletechs = options
 	for r in REGION, k in TECH
 		if techtype[k] == :vre || k == :csp
@@ -77,6 +77,9 @@ function setbounds(sets, params, vars, options)
 	for r in REGION, k in disabletechs, c in CLASS[k]
 		setupperbound(Capacity[r,k,c], 0.0)
 	end
+	# for r in REGION
+	# 	setupperbound(AnnualGeneration[r,:csp], 0.50 * sum(demand[r,h] for h in HOUR) * hoursperperiod)
+	# end
 end
 
 function makeconstraints(m, sets, params, vars, hourinfo, options)
