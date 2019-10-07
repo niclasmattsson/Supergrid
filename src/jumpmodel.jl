@@ -121,6 +121,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 				initialstoragelevel * sum(Capacity[r,k,c] * dischargetime[r,k,c] for c in reservoirclass[sc]) / 1000
 
 		# consider turbine efficiencies later
+		# POSSIBLE BUG (why only class x0 here?)
 		MinHydroFlow[r in REGION, h in HOUR],
 			Electricity[r,:hydro,:x0,h] >= minflow_existinghydro * hoursperperiod * cfhydroinflow[r,:x0,h] * Capacity[r,:hydro,:x0]
 
