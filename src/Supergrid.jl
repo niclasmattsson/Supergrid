@@ -12,39 +12,33 @@ include("jumpmodel.jl")
 include("output.jl")
 include("iewruns.jl")
 
-function defaultoptions()
-    defaults = Dict(
-        :regionset => :Eurasia21,           # :Eurasia21, :Europe8
-        :inputdatasuffix => "",             # e.g. "_landx2" to read solar input data "GISdata_solar2018_Europe8_landx2.mat"
-        :runname => "",                     # change the run name without changing run parameters (e.g. if you modify the code)
-        :islandindexes => [],               # superregion groupings, defaults to [1:8, 9:15, 16:21] for eurasia21, [] for europe8
-        :carbontax => 0.0,                  # €/ton CO2
-        :carboncap => 1.0,                  # global cap in kg CO2/kWh elec  (BAU scenario: ~0.5 kgCO2/kWh elec)
-        :discountrate => 0.05,
-        :maxbioenergy => 0.05,              # max share of biofuel of annual regional electricity demand (assuming CCGT, less if GT) 
-        :nuclearallowed => true,
-        :globalnuclearlimit => Inf,         # maximum total nuclear capacity in all regions (GW)
-        :hydroinvestmentsallowed => false,
-        :transmissionallowed => :all,       # :none, :islands, :all
-        :hours => 1,                        # 1,2,3 or 6 hours per period
-        :solarwindarea => 1,                # area multiplier for GIS solar & wind potentials
-        :datayear => 2018,                  # year of the ERA5 input data (produced by GlobalEnergyGIS.jl)
-        :selectdays => 1,
-        :skipdays => 0,
-        :solver => :cplex,
-        :threads => 3,
-        :showsolverlog => true,
-        :rampingconstraints => false,
-        :rampingcosts => false,
-        :disabletechs => [],
-        :disableregions => [],
-        :resultsfile => "results.jld2"      # use "" to skip saving the results in the database
-    )
-    if defaults[:regionset] == :Eurasia21 && isempty(defaults[:islandindexes])
-        defaults[:islandindexes] = [1:8, 9:15, 16:21]    # change defaults for eurasia21
-    end
-    return defaults
-end
+defaultoptions() = Dict(
+    :regionset => :Europe8,             # :Eurasia21, :Europe8
+    :inputdatasuffix => "",             # e.g. "_landx2" to read solar input data "GISdata_solar2018_Europe8_landx2.mat"
+    :runname => "",                     # change the run name without changing run parameters (e.g. if you modify the code)
+    :islandindexes => [],               # superregion groupings, defaults to [1:8, 9:15, 16:21] for eurasia21, [] for europe8
+    :carbontax => 0.0,                  # €/ton CO2
+    :carboncap => 1.0,                  # global cap in kg CO2/kWh elec  (BAU scenario: ~0.5 kgCO2/kWh elec)
+    :discountrate => 0.05,
+    :maxbioenergy => 0.05,              # max share of biofuel of annual regional electricity demand (assuming CCGT, less if GT) 
+    :nuclearallowed => true,
+    :globalnuclearlimit => Inf,         # maximum total nuclear capacity in all regions (GW)
+    :hydroinvestmentsallowed => false,
+    :transmissionallowed => :all,       # :none, :islands, :all
+    :hours => 1,                        # 1,2,3 or 6 hours per period
+    :solarwindarea => 1,                # area multiplier for GIS solar & wind potentials
+    :datayear => 2018,                  # year of the ERA5 input data (produced by GlobalEnergyGIS.jl)
+    :selectdays => 1,
+    :skipdays => 0,
+    :solver => :cplex,
+    :threads => 3,
+    :showsolverlog => true,
+    :rampingconstraints => false,
+    :rampingcosts => false,
+    :disabletechs => [],
+    :disableregions => [],
+    :resultsfile => "results.jld2"      # use "" to skip saving the results in the database
+)
 
 function autorunname(options)
     name = ""
