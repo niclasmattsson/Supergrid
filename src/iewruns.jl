@@ -303,10 +303,12 @@ function plotiew_lines_v1()
 					titlefont=20, guidefont=16, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]"))
 end
 
+# Doesn't work because it refers to nuclear runs that were not performed, but this chart is not included in the paper.
 function plotiew_lines1_paper()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewcosts1_new.jld2" resultslist allstatus
 	res = resultslist
+	# showall(keys(res))
 	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
 	res0 = res[true,:all,1]
 	resmat1 = [res[true,tm,cap/1000]/totaldemand*1000 for cap in carboncaps, tm in [:islands, :all]]
@@ -321,6 +323,7 @@ function plotiew_lines1_paper()
 					left_margin=50px, gridlinewidth=1))
 end
 
+# Figure 2 in the supergrid paper (fig 1 is the eurasia map).
 function plotiew_lines2_paper()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewcosts1_new.jld2" resultslist allstatus
@@ -362,9 +365,11 @@ function plotiew_lines2_paper()
 	# 				titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
 end
 
+# Figure 4 in the supergrid paper.
 function plotiew_bubbles_paper()
 	@load "iewcosts2_new.jld2" resultslist allstatus
 	res = resultslist
+	showall(keys(res))
 	rows = [3 3 3 2 2 2 1 1 1]
 	cols = [3 2 1 3 2 1 3 2 1]
 	r1 = [(res[1,:islands,0.001,solar,battery]-res[1,:all,0.001,solar,battery])/res[1,:all,0.001,solar,battery] for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
@@ -381,16 +386,18 @@ function plotiew_bubbles_paper()
 					tickfont=14, guidefont=14, left_margin=20px)
 	xticks!([1,2,3],["low","mid","high"])
 	yticks!([1,2,3],["low","mid","high"])
+	# display(plot(s2, size=(500,450)))
 	display(plot(s1, s2, layout=2, size=(1000,450)))
 end
 
+# Figure 3 in the supergrid paper.
 function plotiew_land_energymix()
 	scen = ["Is-lowL", "Sup-lowL", "Is-highL", "Sup-highL"]
 	resultsnames = ["transmissionallowed=islands, nuclearallowed=false, carboncap=0.001",
 					"nuclearallowed=false, carboncap=0.001",
 					"transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, solarwindarea=4",
 					"nuclearallowed=false, carboncap=0.001, solarwindarea=4"]
-	resultsfile = "iewruns1.jld2"
+	resultsfile = "iewruns1_new.jld2"
 	plotiew_energymix(scen, resultsnames, resultsfile)
 end
 
@@ -400,7 +407,7 @@ function plotiew_energymix(scen, resultsnames, resultsfile)
 	palette = [RGB([216,137,255]/255...), RGB([119,112,71]/255...), RGB([199,218,241]/255...), RGB([149,179,215]/255...),
 		RGB([255,255,64]/255...), RGB([240,224,0]/255...), RGB([214,64,64]/255...), RGB([255,192,0]/255...), RGB([99,172,70]/255...),
 		RGB([100,136,209]/255...), RGB([144,213,93]/255...), RGB([148,138,84]/255...), RGB([157,87,205]/255...)]
-	groupedbarflip(collect(scenelec[displayorder,:]')/1e6, label=techlabels, bar_position = :stack, size=(900,550),
+	groupedbarflip(collect(scenelec[displayorder,:]')/1e6, label=techlabels, bar_position = :stack, size=(600,550),
 			left_margin=20px, xticks=(1:length(scen),scen), line=0, tickfont=12, legendfont=12, guidefont=12, color_palette=palette, ylabel="[PWh/year]")
 	xpos = (1:length(scen))'
 	lab = fill("",(1,length(scen)))
