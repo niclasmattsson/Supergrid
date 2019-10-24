@@ -4,56 +4,107 @@ flip(x) = permutedims(x, (2,1))
 
 showall(x) = show(stdout, "text/plain", x)
 
-# groupedbar(rand(10,5), bar_position = :stack, lab=["A" "B" "C" "D" "E"])
-# groupedbar([1:10;12;12], [rand(10,5) zeros(10,5); zeros(2,10)], bar_position = :stack,
-#         lab=["" "" "" "" "" "A" "B" "C" "D" "E"], color=[1 2 3 4 5 5 4 3 2 1], xlim=(0,11))
-
-function groupedbarflip(data; args...)
-    newargs = Dict(args)
-	nbars, ncolors = size(data)
-	x = [1:nbars; nbars+2; nbars+2]
-	newdata = [data zeros(nbars,ncolors); zeros(2,ncolors*2)]
-    if haskey(newargs, :label)
-	   newargs[:label] = [permutedims(repeat([""], ncolors)) reverse(newargs[:label],dims=2)]
-    end
-    colors = get(newargs, :color, (1:ncolors)')
-    newargs[:color] = [colors reverse(colors,dims=2)]
-    newargs[:xlim] = (0, nbars+1)
-    groupedbar(x, newdata; newargs...)
-end
-
 @userplot StackedArea
-
-# a simple "recipe" for Plots.jl to get stacked area plots
-# usage: stackedarea(xvector, datamatrix, plotsoptions)
-@recipe function f(pc::StackedArea)
-    x, y = pc.args
-    n = length(x)
-    y = cumsum(y, dims=2)
-    seriestype := :shape
-
-	# create a filled polygon for each item
-    for c=1:size(y,2)
-        sx = vcat(x, reverse(x))
-        sy = vcat(y[:,c], c==1 ? zeros(n) : reverse(y[:,c-1]))
-        @series (sx, sy)
-    end
-end
-
-@userplot Areaplot
-@recipe function f(a::Areaplot)
-    data = cumsum(a.args[1], dims=2)
+# Bugfix of StatsPlots.areaplot(), i.e. reverse the legend order. 
+@recipe function f(a::StackedArea)
+    data = cumsum(a.args[end], dims=2)
+    n = size(data, 2)
+    x = length(a.args) == 1 ? (1:size(data, 1)) : a.args[1]
     seriestype := :line
-    fillrange := 0
-    @series begin
-        data[:,1]
-    end
-    for i in 2:size(data, 2)
-    @series begin
-            fillrange := data[:,i-1]
-            data[:,i]
+    labels = haskey(plotattributes, :label) ? plotattributes[:label] : ["y$i" for i = 1:n]
+
+    for i in n:-1:1
+        @series begin
+            fillrange := i > 1 ? data[:,i-1] : 0
+            fillcolor --> i
+            label := labels[i]
+            x, data[:,i]
         end
     end
+end
+
+@userplot StackedArea_Polygons
+# A simple "recipe" for Plots.jl to get stacked area plots. This version draws a line around each color patch.
+# (Calling the other function with linecolor=:black doesn't draw the color around the sides or bottom.)
+# usage: stackedarea(xvector, datamatrix, plotsoptions)
+@recipe function f(a::StackedArea_Polygons)
+    data = cumsum(a.args[end], dims=2)
+    nx, nseries = size(data)
+    x = length(a.args) == 1 ? (1:nx) : a.args[1]
+    labels = haskey(plotattributes, :label) ? plotattributes[:label] : ["y$i" for i = 1:n]
+    seriestype := :shape
+
+    # create a filled polygon for each item
+    for i = nseries:-1:1
+        sx = vcat(x, reverse(x))
+        sy = vcat(data[:, i], i==1 ? zeros(nx) : reverse(data[:, i-1]))
+        @series begin
+            fillcolor --> i
+            label := labels[i]
+            (sx, sy)
+        end
+    end
+end
+
+@userplot StackedBar
+# Bugfix of StatsPlots.groupedbar(), i.e. reverse the legend order. Also default to bar_position=:stack.
+@recipe function f(g::StackedBar; spacing = 0)
+    x, y = StatsPlots.grouped_xy(g.args...)
+
+    nr, nc = size(y)
+
+    isstack = pop!(plotattributes, :bar_position, :stack) == :stack
+
+    # extract xnums and set default bar width.
+    # might need to set xticks as well
+    xnums = if eltype(x) <: Number
+        xdiff = length(x) > 1 ? mean(diff(x)) : 1
+        bar_width --> 0.8 * xdiff
+        x
+    else
+        bar_width --> 0.8
+        ux = unique(x)
+        xnums = (1:length(ux)) .- 0.5
+        xticks --> (xnums, ux)
+        xnums
+    end
+    @assert length(xnums) == nr
+
+    # compute the x centers.  for dodge, make a matrix for each column
+    x = if isstack
+        x
+    else
+        bws = plotattributes[:bar_width] / nc
+        bar_width := bws * clamp(1 - spacing, 0, 1)
+        xmat = zeros(nr,nc)
+        for r=1:nr
+            bw = StatsPlots._cycle(bws, r)
+            farleft = xnums[r] - 0.5 * (bw * nc)
+            for c=1:nc
+                xmat[r,c] = farleft + 0.5bw + (c-1)*bw
+            end
+        end
+        xmat
+    end
+
+    # compute fillrange
+    fillrange := if isstack
+        y, fr = StatsPlots.groupedbar_fillrange(y)
+        y = reverse(y, dims=2)
+        fr = reverse(fr, dims=2)
+        fr
+    else
+        get(plotattributes, :fillrange, nothing)
+    end
+
+    seriestype := :bar
+
+    if isstack
+        labels := haskey(plotattributes, :label) ? reverse(plotattributes[:label],dims=2) : ["y$i" for j = 1:1, i = nc:-1:1]
+        fillcolor --> permutedims(nc:-1:1)
+    end
+
+    x, y
 end
 
 #=
