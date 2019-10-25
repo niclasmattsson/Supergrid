@@ -171,17 +171,17 @@ function IEWruns_gispaper_mixes()
 				nuclearallowed=false, transmissionallowed=:none, resultsfile="results_gispaper_mixes.jld2");
 end
 
-function IEWruns_gispaper_mixes_v2()
+function IEWruns_gispaper_mixes_v3()
 	for region in [:China6, :Europe8]
 		for landarea in [1, 4]
 			println("\n\n\nNew run: region=$region, landarea=$landarea.")
 			runmodel(regionset=region, carboncap=0.025, discountrate=0.07,
-							nuclearallowed=false, solarwindarea=landarea, resultsfile="results_gispaper_mixes_v2.jld2");
+							nuclearallowed=false, solarwindarea=landarea, resultsfile="results_gispaper_mixes_v3.jld2");
 		end
 	end
 	println("\n\n\nNew run: region=Europe, no transmission.")
 	runmodel(regionset=:europe8, carboncap=0.025, discountrate=0.07,
-				nuclearallowed=false, solarwindarea=1, transmissionallowed=:none, resultsfile="results_gispaper_mixes_v2.jld2");
+				nuclearallowed=false, solarwindarea=1, transmissionallowed=:none, resultsfile="results_gispaper_mixes_v3.jld2");
 end
 
 function solarruns()
@@ -217,35 +217,35 @@ end
 # GIS paper figure 4
 function plotiew_gispaper_mixes1()
 	scen = ["default", "high land"]
-	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v2.jld2",
-					"discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v2.jld2, solarwindarea=4"]
-	resultsfile = "results_gispaper_mixes_v2.jld2"
+	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2",
+					"discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2, solarwindarea=4"]
+	resultsfile = "results_gispaper_mixes_v3.jld2"
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="Europe")
 	scen = ["default", "high land"]
-	resultsnames = ["regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v2.jld2",
-					"regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v2.jld2, solarwindarea=4"]
+	resultsnames = ["regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2",
+					"regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2, solarwindarea=4"]
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="China")
 end
 
 # GIS paper figure 5
 function plotiew_gispaper_mixes2()
 	scen = ["default", "no transmission"]
-	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v2.jld2",
-					"regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v2.jld2"]
-	resultsfile = "results_gispaper_mixes_v2.jld2"
+	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2",
+					"regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2"]
+	resultsfile = "results_gispaper_mixes_v3.jld2"
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="Europe")
 end
 
 # GIS paper figure 6
 function plotiew_gispaper_springmonth()
-	r = loadresults("regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v2.jld2", resultsfile="results_gispaper_mixes_v2.jld2")
+	r = loadresults("regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2", resultsfile="results_gispaper_mixes_v3.jld2")
 	annualelec, capac, tcapac, chart = analyzeresults(r)
 	chart(:FRA, xlims=(1872,1872+722), ylims=(0,207))
 end
 
 # GIS paper figures 3 and 7
 function plotiew_gispaper_classes1()
-	r = loadresults("regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v2.jld2", resultsfile="results_gispaper_mixes_v2.jld2")
+	r = loadresults("regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2", resultsfile="results_gispaper_mixes_v3.jld2")
 	annualelec, capac, tcapac, chart = analyzeresults(r)
 	chart(:TOT)
 	chart(:BARS, ylims=(0,1150))
@@ -253,7 +253,7 @@ end
 
 # GIS paper figure 3 and 8
 function plotiew_gispaper_classes2()
-	r = loadresults("discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v2.jld2", resultsfile="results_gispaper_mixes_v2.jld2")
+	r = loadresults("discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2", resultsfile="results_gispaper_mixes_v3.jld2")
 	annualelec, capac, tcapac, chart = analyzeresults(r)
 	chart(:TOT)
 	chart(:BARS, ylims=(0,1150))
