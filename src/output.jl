@@ -159,9 +159,6 @@ function analyzeresults(results::Results)
 			println("Regional system cost per MWh generated (€/MWh):")
 			display(round.(lcoe, digits=2))
 
-			# stackedbar(String.(REGION),collect(annualelec[displayorder,1:end-1]'/1000), labels=techlabels,
-			# 	size=(1850,950), ylims=(0,1150), line=0, tickfont=14, legendfont=14, color_palette=palette,
-			# 	yformatter=:plain)
 			stackedbar(String.(REGION), collect(annualelec[displayorder,1:end-1]'/1000); labels=techlabels, size=(900,550),
 				line=0, tickfont=14, legendfont=14, color_palette=palette, yformatter=:plain, optionlist...)
 
@@ -238,10 +235,7 @@ function analyzeresults(results::Results)
 		reglevel = sumdimdrop(level[:,regs], dims=2)
 		# display(plot(HOUR,[regcharge regelec[:,12] reglevel],size=(1850,950)))
 
-		# stackedarea(HOUR, regelec, labels=techlabels, size=(1850,950), line=0, tickfont=16, legendfont=16, color_palette=palette)
-		# stackedarea(HOUR, regelec, labels=techlabels, size=(900,550), line=0, tickfont=16, legendfont=16, color_palette=palette)
-		# xlims=(1872,1872+722), ylims=(0,207),
-		stackedarea(HOUR, regelec; labels=techlabels, size=(900,550), line=0, tickfont=16, legendfont=16,
+		stackedarea(HOUR, regelec; labels=techlabels, size=(900,550), line=(0.03,1,:black), tickfont=16, legendfont=16,
 									color_palette=palette, optionlist...)
 		plotbatterycharge && plot!(HOUR, -regcharge, color=RGB([157,87,205]/255...))
 		plotbatterylevel && plot!(HOUR, reglevel, line=(:black,:dash))
