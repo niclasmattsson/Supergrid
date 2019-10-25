@@ -94,6 +94,7 @@ function makeparameters(sets, options, hourinfo)
 	initialstoragelevel = 0.7		# make this tech dependent later
 	minflow_existinghydro = 0.4
 	cspsolarmultiple = 3.0			# peak capacity of collectors divided by turbine power
+	cspthermalstoragehours = 9
 
 	numregions = length(REGION)
 	nhours = length(HOUR)
@@ -180,7 +181,7 @@ function makeparameters(sets, options, hourinfo)
 	dischargetime[:,:hydro,2:end-1-nclasses] = reshape(hydrovars["potentialmeandischargetime"][activeregions,:,:], numregions, nhydro-1)
 
 	dischargetime[:,:battery,:_] .= 1
-	dischargetime[:,:csp,:] .= 9
+	dischargetime[:,:csp,:] .= cspthermalstoragehours
 	dischargetime[isnan.(dischargetime)] = fill(10000, sum(isnan.(dischargetime)))
 	dischargetime[dischargetime .> 10000] = fill(10000, sum(dischargetime .> 10000))
 
@@ -222,6 +223,7 @@ function makeparameters(sets, options, hourinfo)
 	transmissionislands = AxisArray(islands[activeregions,activeregions], REGION, REGION)
 
 	# Efficiencies for storage technologies are round trip efficiencies.
+	# CSP costs are adjusted for solar field size and storage capacity further below.
 	techtable = [
 		#				investcost 	variablecost	fixedcost	lifetime	efficiency	rampingrate
 		#				€/kW		€/MWh elec		€/kW/year	years					share of capacity per hour
@@ -231,13 +233,13 @@ function makeparameters(sets, options, hourinfo)
 		:bioGT			500			1				10			30			0.4			1
 		:bioCCGT		800			1				16			30			0.6			0.3
 		:nuclear		5000		3				150			50			0.4			0.05
-		:wind			1200		0				60			25			1			1
-		:offwind		2400		0				120			25			1			1
+		:wind			1200		0				43			25			1			1
+		:offwind		2300		0				86			25			1			1
 		:transmission	NaN			0				NaN			50			NaN			1
-		:battery		150			0.1				1.5			10			0.81		1	# 1h discharge time, 150 €/kW = 150 €/kWh
-		:pv				800			0				16			25			1			1
-		:pvroof			1000		0				20			25			1			1
-		:csp			3500		0				35			30			1			1	# adjust investcost for solar multiple below
+		:battery		150			0.1				1.5			10			0.9			1	# 1h discharge time, 150 €/kW = 150 €/kWh
+		:pv				600			0				16			25			1			1
+		:pvroof			900			0				20			25			1			1
+		:csp			4120		0				35			30			1			1	# for solar multiple=2, storage=3 hours
 		:hydro			10			0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 
 	]
 	techs = techtable[:,1]
@@ -305,9 +307,15 @@ function makeparameters(sets, options, hourinfo)
 		investcost[k,6:10] .+= 200
 	end
 
-	# adjust CSP parameters for solar multiple, convert solar capacity to electrical power
-	# collectors about 40% of total cost (IRENA 2012), scale up the collector component of the cost
-	investcost[:csp,:] = investcost[:csp,:] * (0.6 + 0.4*cspsolarmultiple)		# base data is per kW electrical for solar multiple 1 
+	# CSP solar tower cost analysis: 
+	# Costs vary with the solar multiple (collector field size) and thermal storage capacity (in hours).
+	# Fit a linear function of these parameters to the cost table in (IRENA 2012, table 4.1 page 14), see CSP cost analysis.xlsx.
+	# Assume solar field costs are 30% of total costs and storage about 15% of total costs (roughly inline with IRENA 2012, fig 4.4).
+	# Then assume a 20% cost reduction to 2050.
+	# (The base plant in the cost table above has solar multiple = 2 and storage = 3 hours.)
+	# Resulting cost for a plant with solar multiple = 3 and storage = 9 hours:  5977 €/kW.
+	investcost[:csp,:] = investcost[:csp,:] * (0.55 + 0.3*cspsolarmultiple/2.0 + 0.15*cspthermalstoragehours/3.0)
+
 	cf[:,:csp,:,:] = cf[:,:csp,:,:] * cspsolarmultiple							# OK if this surpasses 100%
 	classlimits[:,:csp,:] = classlimits[:,:csp,:] / cspsolarmultiple			# GIS data calculated as peak solar power
 	# The Capacity variable of the model should now be correct (turbine capacity, with a larger solar collector field)
