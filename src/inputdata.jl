@@ -278,6 +278,7 @@ function makeparameters(sets, options, hourinfo)
 	allclasses = union(sets.CLASS[:pv], sets.CLASS[:hydro], [:_])
 	cf = AxisArray(ones(numregions,length(TECH),length(allclasses),nhours), REGION, TECH, allclasses, HOUR)
 	classlimits = AxisArray(zeros(numregions,5,length(CLASS[:pv])), REGION, [:wind, :offwind, :pv, :pvroof, :csp], CLASS[:pv])
+	solarcombinedarea = AxisArray(zeros(numregions,length(CLASS[:pv]),length(CLASS[:csp])), REGION, CLASS[:pv], CLASS[:csp])
 
 	cf[:,:wind,1:5,:] = permutedims(reducehours(windvars["CFtime_windonshoreA"][:,activeregions,:], 1, hourinfo), [2,3,1])
 	cf[:,:offwind,1:5,:] = permutedims(reducehours(windvars["CFtime_windoffshore"][:,activeregions,:], 1, hourinfo), [2,3,1])
@@ -298,6 +299,13 @@ function makeparameters(sets, options, hourinfo)
 	classlimits[:,:wind,6:10] = windvars["capacity_onshoreB"][activeregions,:] * solarwindarea
 	classlimits[:,:pv,6:10] = solarvars["capacity_pvplantB"][activeregions,:] * solarwindarea
 	classlimits[:,:csp,6:10] = solarvars["capacity_cspplantB"][activeregions,:] * solarwindarea
+
+	solarcombinedarea[:,1:5,1:5] = solarvars["solar_overlap_areaA"][activeregions,:,:] * solarwindarea
+	solarcombinedarea[:,6:10,6:10] = solarvars["solar_overlap_areaB"][activeregions,:,:] * solarwindarea
+	pv_density = solarvars["pv_density"]
+	csp_density = solarvars["csp_density"]
+	display(sum(solarcombinedarea[:SPA,1:5,1:5], dims=2) * pv_density)
+	display(classlimits[:SPA,:pv,1:5])
 
 	investcost = AxisArray(zeros(length(techs),length(allclasses)), techs, allclasses)	# €/kW
 	for k in techs, c in CLASS[k]
@@ -331,7 +339,8 @@ function makeparameters(sets, options, hourinfo)
 
 	return Params(cf, transmissionlosses, demand, hydrocapacity, cfhydroinflow, classlimits, transmissionislands,
 		efficiency, rampingrate, dischargetime, initialstoragelevel, minflow_existinghydro, emissionsCO2, fuelcost,
-		variablecost, smalltransmissionpenalty, investcost, crf, fixedcost, transmissioninvestcost, transmissionfixedcost, hydroeleccost)
+		variablecost, smalltransmissionpenalty, investcost, crf, fixedcost, transmissioninvestcost, transmissionfixedcost,
+		hydroeleccost, solarcombinedarea, pv_density, csp_density, cspsolarmultiple)
 end
 
 # Run fix_timezone_error() if an error like this is produced (the build step should take care if this for most people):

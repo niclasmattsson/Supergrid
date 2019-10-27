@@ -38,10 +38,11 @@ function makevariables(m, sets)
 		Transmission[r1 in REGION, r2 in REGION, h in HOUR] >= 0						# GWh elec/period
 		TransmissionCapacity[r1 in REGION, r2 in REGION] >= 0							# GW elec
 		Capacity[r in REGION, k in TECH, c in CLASS[k]] >= 0							# GW elec
+		SolarCapacity[r in REGION, k in [:pv, :csp], pv in CLASS[:pv], csp in CLASS[:csp]] >= 0		# GW elec
 	end #variables
 
 	return Vars(Systemcost, CO2emissions, FuelUse, Electricity, AnnualGeneration, Charging, StorageLevel,
-					Transmission, TransmissionCapacity, Capacity)
+					Transmission, TransmissionCapacity, Capacity, SolarCapacity)
 end
 
 function setbounds(sets, params, vars, options)
@@ -88,9 +89,10 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 	@unpack REGION, FUEL, TECH, CLASS, STORAGECLASS, HOUR, techtype, techfuel, reservoirclass = sets
 	@unpack cf, transmissionlosses, demand, cfhydroinflow, efficiency, rampingrate, dischargetime, initialstoragelevel,
 			minflow_existinghydro, emissionsCO2, fuelcost, variablecost, smalltransmissionpenalty, investcost, crf, fixedcost,
-			transmissioninvestcost, transmissionfixedcost, hydroeleccost = params
+			transmissioninvestcost, transmissionfixedcost, hydroeleccost, solarcombinedarea,
+			pv_density, csp_density, cspsolarmultiple = params
 	@unpack Systemcost, CO2emissions, FuelUse, Electricity, AnnualGeneration, Charging, StorageLevel,
-			Transmission, TransmissionCapacity, Capacity = vars
+			Transmission, TransmissionCapacity, Capacity, SolarCapacity = vars
 	@unpack hoursperperiod = hourinfo
 	@unpack carbontax, carboncap, rampingconstraints, maxbioenergy, globalnuclearlimit = options
 
@@ -149,6 +151,20 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
 
 		BioLimit[r in REGION],
 			sum(AnnualGeneration[r,k] for k in [:bioGT, :bioCCGT]) <= maxbioenergy * sum(demand[r,h] for h in HOUR) * hoursperperiod
+
+		# This does not quite make the variable bound redundant, because e.g. some pixels in PV class 1 are class "0" for CSP,
+		# and are therefore unaffected by this constraint. 
+		SolarOverlap[r in REGION, pv in CLASS[:pv], csp in CLASS[:csp]],
+			SolarCapacity[r,:pv,pv,csp]/pv_density + SolarCapacity[r,:csp,pv,csp]/csp_density/cspsolarmultiple <=
+				solarcombinedarea[r,pv,csp]
+
+		# There could be a minor bug here depending on the numerical class limits. If there are pixels in e.g. PV class a1
+		# which do not belong to any CSP class, then we may miscount PV capacity. But this does not happen with our parameters.
+		PVcapacity[r in REGION, pv in CLASS[:pv]],
+			Capacity[r,:pv,pv] == sum(SolarCapacity[r,:pv,pv,csp] for csp in CLASS[:csp])
+
+		CSPcapacity[r in REGION, csp in CLASS[:csp]],
+			Capacity[r,:csp,csp] == sum(SolarCapacity[r,:csp,pv,csp] for pv in CLASS[:pv])
 
 		TotalCO2[r in REGION],
 			CO2emissions[r] == sum(FuelUse[r,f] * emissionsCO2[f] for f in FUEL)

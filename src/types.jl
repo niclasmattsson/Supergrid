@@ -35,6 +35,10 @@ struct Params
 	transmissioninvestcost		::AxisArray{Float64,2}
 	transmissionfixedcost		::AxisArray{Float64,2}
 	hydroeleccost				::AxisArray{Float64,2}
+	solarcombinedarea			::AxisArray{Float64,3}
+	pv_density					::Float64
+	csp_density					::Float64
+	cspsolarmultiple			::Float64
 end
 
 struct Vars
@@ -48,6 +52,7 @@ struct Vars
 	Transmission				::JuMP.JuMPArray{JuMP.Variable,3}
 	TransmissionCapacity		::JuMP.JuMPArray{JuMP.Variable,2}
 	Capacity					::JuMP.JuMPDict{JuMP.Variable,3}
+	SolarCapacity				::JuMP.JuMPArray{JuMP.Variable,4}
 end
 
 # add type info here too
