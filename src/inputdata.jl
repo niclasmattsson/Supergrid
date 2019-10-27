@@ -304,8 +304,6 @@ function makeparameters(sets, options, hourinfo)
 	solarcombinedarea[:,6:10,6:10] = solarvars["solar_overlap_areaB"][activeregions,:,:] * solarwindarea
 	pv_density = solarvars["pv_density"]
 	csp_density = solarvars["csp_density"]
-	display(sum(solarcombinedarea[:SPA,1:5,1:5], dims=2) * pv_density)
-	display(classlimits[:SPA,:pv,1:5])
 
 	investcost = AxisArray(zeros(length(techs),length(allclasses)), techs, allclasses)	# €/kW
 	for k in techs, c in CLASS[k]
