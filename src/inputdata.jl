@@ -239,7 +239,7 @@ function makeparameters(sets, options, hourinfo)
 		:battery		150			0.1				1.5			10			0.9			1	# 1h discharge time, 150 €/kW = 150 €/kWh
 		:pv				600			0				16			25			1			1
 		:pvroof			900			0				20			25			1			1
-		:csp			4120		0				35			30			1			1	# for solar multiple=2, storage=3 hours
+		:csp			3600		0				35			30			1			1	# for solar multiple=2, storage=3 hours
 		:hydro			10			0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 
 	]
 	techs = techtable[:,1]
