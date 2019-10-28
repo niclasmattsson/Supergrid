@@ -47,34 +47,36 @@ function plot_FHnuclearextraruns_energymix()
 					"regionset=eurasia21, transmissionallowed=islands, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
 					"regionset=eurasia21, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]"]
 	resultsfile = "FHnuclearextraruns.jld2"
-	plotiew_energymix(scen, resultsnames, resultsfile)
-	# plotiew_energymix(scen[1,2,5,6], resultsnames[1,2,5,6], resultsfile)
+	plot_energymix(scen, resultsnames, resultsfile)
+	# plot_energymix(scen[1,2,5,6], resultsnames[1,2,5,6], resultsfile)
 end
 
-function IEWruns1(hourinterval)
+function supergridruns1(hourinterval)
 	resultslist = Dict()
 	allstatus = Dict()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct17"
 	runcount = 0
 	for nuc in [false]
-		for solarwind in [1, 4]
+		for solarwind in [1, 2]
 			for tm in [:none, :islands, :all]
 				for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0]
 					# runcount += 1
 					# runcount in [1] && continue
 					println("\n\n\nNew run: nuclear=$nuc, solarwind=$solarwind, transmission=$tm, cap=$cap.")
-					model = buildmodel(hours=hourinterval, carboncap=cap, maxbioenergy=0.05, 
-										nuclearallowed=nuc, transmissionallowed=tm, solarwindarea=solarwind)
+					model = buildmodel(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21], hours=hourinterval, maxbioenergy=0.05, 
+										carboncap=cap, nuclearallowed=nuc, transmissionallowed=tm, solarwindarea=solarwind)
 					println("\nSolving model...")
 					status = solve(model.modelname)
 					println("\nSolve status: $status")
 					resultslist[nuc,solarwind,tm,cap] = sum(getvalue(model.vars.Systemcost))
 					allstatus[nuc,solarwind,tm,cap] = status
-					@save "iewcosts1_new.jld2" resultslist allstatus
+					@save "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
 					println("\nReading results...")
 					results = readresults(model, status)
 					name = autorunname(model.options)
 					println("\nSaving results to disk...")
-					saveresults(results, name, resultsfile="iewruns1_new.jld2")
+					saveresults(results, name, resultsfile="$(path)supergridruns1$runsuffix.jld2")
 				end
 			end
 		end
@@ -82,11 +84,13 @@ function IEWruns1(hourinterval)
 	resultslist, allstatus
 end
 
-function IEWruns2(hourinterval)
+function supergridruns2(hourinterval)
 	resultslist = Dict()
 	allstatus = Dict()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct17"
 	for nuc in [false]
-		for solarwind in [4]
+		for solarwind in [1, 2]
 			for tm in [:islands, :all]
 				for cap in [0.001]
 					options, hourinfo, sets, params = buildsetsparams(hours=hourinterval, carboncap=cap, maxbioenergy=0.05,
@@ -99,14 +103,14 @@ function IEWruns2(hourinterval)
 							println("\n\n\nNew run: nuclear=$nuc, solarwind=$solarwind, transmission=$tm, cap=$cap, solar=$solar, battery=$battery.")
 							for c in sets.CLASS[:pv]
 								if solar == :high
-									params.investcost[:pv,c] = pvcost * 1.5
-									params.investcost[:pvroof,c] = pvroofcost + pvcost * 0.5
+									params.investcost[:pv,c] = pvcost + 300
+									params.investcost[:pvroof,c] = pvroofcost + 300
 								elseif solar == :mid
 									params.investcost[:pv,c] = pvcost
 									params.investcost[:pvroof,c] = pvroofcost
 								elseif solar == :low
-									params.investcost[:pv,c] = pvcost * 0.5
-									params.investcost[:pvroof,c] = pvroofcost - pvcost * 0.5
+									params.investcost[:pv,c] = pvcost - 300
+									params.investcost[:pvroof,c] = pvroofcost - 300
 								end
 							end
 							if battery == :high
@@ -122,12 +126,12 @@ function IEWruns2(hourinterval)
 							println("\nSolve status: $status")
 							resultslist[solarwind,tm,cap,solar,battery] = sum(getvalue(model.vars.Systemcost))
 							allstatus[solarwind,tm,cap,solar,battery] = status
-							@save "iewcosts2_new.jld2" resultslist allstatus
+							@save "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
 							println("\nReading results...")
 							results = readresults(model, status)
 							name = autorunname(model.options) * ", solarwind=$solarwind, solar=$solar, battery=$battery"
 							println("\nSaving results to disk...")
-							saveresults(results, name, resultsfile="iewruns2_new.jld2")
+							saveresults(results, name, resultsfile="$(path)supergridruns2$runsuffix.jld2")
 						end
 					end
 				end
@@ -137,9 +141,10 @@ function IEWruns2(hourinterval)
 	resultslist, allstatus
 end
 
-function IEWruns3(hourinterval)
+function supergridruns_biotest(hourinterval)
 	results = Dict()
 	allstatus = Dict()
+	path = "D:\\model runs\\"
 	for bio in [0, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3]
 		for tm in [:islands, :all]
 			for cap in [0.005, 0]
@@ -151,109 +156,82 @@ function IEWruns3(hourinterval)
 				println("\nSolve status: $status")
 				results[bio,tm,cap] = sum(getvalue(model.vars.Systemcost))
 				allstatus[bio,tm,cap] = status
-				@save "iewruns3_$(hourinterval)h.jld2" results allstatus
+				@save "$(path)supergridruns_biotest_$(hourinterval)h.jld2" results allstatus
 			end
 		end
 	end
 	results, allstatus
 end
 
-function IEWruns_gispaper_mixes()
+function gispaperruns()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct17"
+	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
 	for region in [:China6, :Europe8]
-		for landsuffix in ["", "_landx4"]
-			println("\n\n\nNew run: region=$region, landscenariosuffix=$landsuffix.")
-			runmodel(regionset=region, carboncap=0.025, discountrate=0.07,
-							nuclearallowed=false, inputdatasuffix=landsuffix, resultsfile="results_gispaper_mixes.jld2");
-		end
-	end
-	println("\n\n\nNew run: region=$region, no transmission.")
-	runmodel(regionset=:europe8, carboncap=0.025, discountrate=0.07,
-				nuclearallowed=false, transmissionallowed=:none, resultsfile="results_gispaper_mixes.jld2");
-end
-
-function IEWruns_gispaper_mixes_v3()
-	for region in [:China6, :Europe8]
-		for landarea in [1, 4]
+		for landarea in [1, 2]
 			println("\n\n\nNew run: region=$region, landarea=$landarea.")
 			runmodel(regionset=region, carboncap=0.025, discountrate=0.07,
-							nuclearallowed=false, solarwindarea=landarea, resultsfile="results_gispaper_mixes_v3.jld2");
+							nuclearallowed=false, solarwindarea=landarea, resultsfile=resultsfile);
 		end
 	end
 	println("\n\n\nNew run: region=Europe, no transmission.")
 	runmodel(regionset=:europe8, carboncap=0.025, discountrate=0.07,
-				nuclearallowed=false, solarwindarea=1, transmissionallowed=:none, resultsfile="results_gispaper_mixes_v3.jld2");
-end
-
-function solarruns()
-	# runmodel(regionset=:Eurasia21, carboncap=0.01, transmissionallowed=:none, nuclearallowed=false, solarwindarea=4);
-	# runmodel(regionset=:Eurasia21, carboncap=0.01, transmissionallowed=:islands, nuclearallowed=false, solarwindarea=4);
-	runmodel(regionset=:Eurasia21, carboncap=0.01, transmissionallowed=:all, nuclearallowed=false, solarwindarea=4);
-	runmodel(regionset=:Eurasia21, carboncap=0.01, transmissionallowed=:all, nuclearallowed=false, solarwindarea=4,
-				disabletechs=[:wind, :offwind]);
-end
-
-function plotsolarruns()
-	scen = ["none", "islands", "all", "all - no wind", "all - CSPx1", "all - no CSP"]
-	resultsnames = ["transmissionallowed=none, nuclearallowed=false, carboncap=0.01, solarwindarea=4",
-					"transmissionallowed=islands, nuclearallowed=false, carboncap=0.01, solarwindarea=4",
-					"nuclearallowed=false, carboncap=0.01, solarwindarea=4",
-					"nuclearallowed=false, carboncap=0.01, solarwindarea=4, disabletechs=Symbol[:wind, :offwind]",
-					"outputsuffix=_CSPx1, nuclearallowed=false, carboncap=0.01, resultsfile=solarresults.jld2, solarwindarea=4, disabletechs=Symbol[:wind, :offwind]",
-					"nuclearallowed=false, carboncap=0.01, resultsfile=solarresults.jld2, solarwindarea=4, disabletechs=Symbol[:wind, :offwind, :csp]"]
-	resultsfile = "solarresults.jld2"
-	chart_energymix_scenarios(scen, resultsnames, resultsfile)
-end
-
-function plotiew_gispaper_mixes_old()
-	scen = ["Europe-default", "Europe-highland", "China-default", "China-highland"]
-	resultsnames = ["regionset=Europe8, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2",
-					"regionset=Europe8, discountrate=0.07, inputdatasuffix=_landx4, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2",
-					"regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2",
-					"regionset=China6, discountrate=0.07, inputdatasuffix=_landx4, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes.jld2"]
-	resultsfile = "results_gispaper_mixes.jld2"
-	chart_energymix_scenarios(scen, resultsnames, resultsfile)
+				nuclearallowed=false, solarwindarea=1, transmissionallowed=:none, resultsfile=resultsfile);
 end
 
 # GIS paper figure 4
-function plotiew_gispaper_mixes1()
+function plot_gispaper_mixes1()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct17"
+	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
 	scen = ["default", "high land"]
-	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2",
-					"discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2, solarwindarea=4"]
-	resultsfile = "results_gispaper_mixes_v3.jld2"
+	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile",
+					"discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile, solarwindarea=2"]
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="Europe")
 	scen = ["default", "high land"]
-	resultsnames = ["regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2",
-					"regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2, solarwindarea=4"]
+	resultsnames = ["regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile",
+					"regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile, solarwindarea=2"]
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="China")
 end
 
 # GIS paper figure 5
-function plotiew_gispaper_mixes2()
+function plot_gispaper_mixes2()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct17"
+	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
 	scen = ["default", "no transmission"]
-	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2",
-					"regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2"]
-	resultsfile = "results_gispaper_mixes_v3.jld2"
+	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile",
+					"regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile"]
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="Europe")
 end
 
 # GIS paper figure 6
-function plotiew_gispaper_springmonth()
-	r = loadresults("regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2", resultsfile="results_gispaper_mixes_v3.jld2")
+function plot_gispaper_springmonth()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct17"
+	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
+	r = loadresults("regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile", resultsfile=resultsfile)
 	annualelec, capac, tcapac, chart = analyzeresults(r)
 	chart(:FRA, xlims=(1872,1872+722), ylims=(0,207))
 end
 
 # GIS paper figures 3 and 7
-function plotiew_gispaper_classes1()
-	r = loadresults("regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2", resultsfile="results_gispaper_mixes_v3.jld2")
+function plot_gispaper_classes1()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct17"
+	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
+	r = loadresults("regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile", resultsfile=resultsfile)
 	annualelec, capac, tcapac, chart = analyzeresults(r)
 	chart(:TOT)
 	chart(:BARS, ylims=(0,1150))
 end
 
 # GIS paper figure 3 and 8
-function plotiew_gispaper_classes2()
-	r = loadresults("discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=results_gispaper_mixes_v3.jld2", resultsfile="results_gispaper_mixes_v3.jld2")
+function plot_gispaper_classes2()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct17"
+	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
+	r = loadresults("discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile", resultsfile=resultsfile)
 	annualelec, capac, tcapac, chart = analyzeresults(r)
 	chart(:TOT)
 	chart(:BARS, ylims=(0,1150))
@@ -275,7 +253,7 @@ function mergeresults()
 	@save "iewcosts2.jld2" resultslist allstatus
 end
 
-function plotiew_lines_v2()
+function plot_lines_v2()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewcosts1.jld2" resultslist allstatus
 	res = resultslist
@@ -303,7 +281,7 @@ function plotiew_lines_v2()
 	# 				titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
 end
 
-function plotiew_lines_hydro()
+function plot_lines_hydro()
 	@load "iewcosts1.jld2" resultslist allstatus
 	res = resultslist
 	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
@@ -327,7 +305,7 @@ function plotiew_lines_hydro()
 end
 
 # using JLD2, Plots; @load "iewruns1_1h.jld2" results allstatus; plotly()
-function plotiew_lines_v1()
+function plot_lines_v1()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewruns1_1h.jld2" results allstatus
 	res = results
@@ -342,7 +320,7 @@ function plotiew_lines_v1()
 end
 
 # Doesn't work because it refers to nuclear runs that were not performed, but this chart is not included in the paper.
-function plotiew_lines1_paper()
+function plot_lines1_paper()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewcosts1_new.jld2" resultslist allstatus
 	res = resultslist
@@ -362,7 +340,7 @@ function plotiew_lines1_paper()
 end
 
 # Figure 2 in the supergrid paper (fig 1 is the eurasia map).
-function plotiew_lines2_paper()
+function plot_lines2_paper()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewcosts1_new.jld2" resultslist allstatus
 	res = resultslist
@@ -400,7 +378,7 @@ function plotiew_lines2_paper()
 end
 
 # Figure 4 in the supergrid paper.
-function plotiew_bubbles_paper()
+function plot_bubbles_paper()
 	@load "iewcosts2.jld2" resultslist allstatus
 	res = resultslist
 	# showall(keys(res))
@@ -425,17 +403,17 @@ function plotiew_bubbles_paper()
 end
 
 # Figure 3 in the supergrid paper.
-function plotiew_land_energymix()
+function plot_land_energymix()
 	scen = ["C", "S", "C_Hland", "S_Hland"]
 	resultsnames = ["transmissionallowed=islands, nuclearallowed=false, carboncap=0.001",
 					"nuclearallowed=false, carboncap=0.001",
 					"transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, solarwindarea=4",
 					"nuclearallowed=false, carboncap=0.001, solarwindarea=4"]
 	resultsfile = "iewruns1_new.jld2"
-	plotiew_energymix(scen, resultsnames, resultsfile)  #, deletetechs=[1,2,6,7,12])
+	plot_energymix(scen, resultsnames, resultsfile)  #, deletetechs=[1,2,6,7,12])
 end
 
-function plotiew_energymix(scen, resultsnames, resultsfile; deletetechs=[])
+function plot_energymix(scen, resultsnames, resultsfile; deletetechs=[])
 	scenelec, demands, hoursperperiod, displayorder, techlabels = iew_getscenarioresults(scen, resultsnames, resultsfile)
 
 	palette = [RGB([216,137,255]/255...), RGB([119,112,71]/255...), RGB([199,218,241]/255...), RGB([149,179,215]/255...),
@@ -485,7 +463,7 @@ function iew_getscenarioresults(scenarios, resultsnames, resultsfile)
 	return scenelec, demands, hoursperperiod, displayorder, techlabels
 end
 
-function plotiew_bubbles_v1()
+function plot_bubbles_v1()
 	@load "iewruns2_1h.jld2" results allstatus
 	res = results
 	rows = [3 3 3 2 2 2 1 1 1]
@@ -500,7 +478,7 @@ function plotiew_bubbles_v1()
 	display(s)
 end
 
-function plotiew_bubbles_v2()
+function plot_bubbles_v2()
 	@load "iewcosts2.jld2" resultslist allstatus
 	res = resultslist
 	rows = [3 3 3 2 2 2 1 1 1]
@@ -522,7 +500,7 @@ function plotiew_bubbles_v2()
 	display(plot(s1, s2, layout=2, size=(1350,650)))
 end
 
-function plotiew_bubbles_v2_abs()
+function plot_bubbles_v2_abs()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
 	@load "iewcosts2.jld2" resultslist allstatus
 	res = resultslist
@@ -545,7 +523,7 @@ function plotiew_bubbles_v2_abs()
 	display(plot(s1, s2, layout=2, size=(1350,650)))
 end
 
-function plotiew_biolines_v1()
+function plot_biolines_v1()
 	@load "iewruns1_1h.jld2" results allstatus
 	res0 = results[true,:all,1]
 	@load "iewruns3_1h.jld2" results allstatus
