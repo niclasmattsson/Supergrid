@@ -55,7 +55,7 @@ function supergridruns1(hourinterval)
 	resultslist = Dict()
 	allstatus = Dict()
 	path = "D:\\model runs\\"
-	runsuffix = "_oct17"
+	runsuffix = "_oct31"
 	runcount = 0
 	for nuc in [false]
 		for solarwind in [1, 2]
@@ -88,12 +88,13 @@ function supergridruns2(hourinterval)
 	resultslist = Dict()
 	allstatus = Dict()
 	path = "D:\\model runs\\"
-	runsuffix = "_oct17"
+	runsuffix = "_oct31"
 	for nuc in [false]
 		for solarwind in [1, 2]
 			for tm in [:islands, :all]
 				for cap in [0.001]
 					options, hourinfo, sets, params = buildsetsparams(hours=hourinterval, carboncap=cap, maxbioenergy=0.05,
+											regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21], 
 											solarwindarea=solarwind, nuclearallowed=nuc, transmissionallowed=tm)
 					pvcost = params.investcost[:pv,:a1]
 					pvroofcost = params.investcost[:pvroof,:a1]
@@ -163,75 +164,67 @@ function supergridruns_biotest(hourinterval)
 	results, allstatus
 end
 
-function gispaperruns()
+function gispaperruns(runsuffix="_oct31")
 	path = "D:\\model runs\\"
-	runsuffix = "_oct17"
 	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
-	for region in [:China6, :Europe8]
-		for landarea in [1, 2]
-			println("\n\n\nNew run: region=$region, landarea=$landarea.")
-			runmodel(regionset=region, carboncap=0.025, discountrate=0.07,
-							nuclearallowed=false, solarwindarea=landarea, resultsfile=resultsfile);
-		end
+	for region in [:China6, :Europe8], carboncap in [0.025, 0.005, 0.001], landarea in [1, 2]
+		println("\n\n\nNew run: region=$region, carboncap=$carboncap, landarea=$landarea.")
+		runmodel(regionset=region, carboncap=carboncap, discountrate=0.07,
+						nuclearallowed=false, solarwindarea=landarea, resultsfile=resultsfile);
+		println("\n\n\nNew run: region=$region, carboncap=$carboncap, landarea=$landarea, no transmission.")
+		runmodel(regionset=region, carboncap=carboncap, discountrate=0.07,
+				nuclearallowed=false, solarwindarea=landarea, transmissionallowed=:none, resultsfile=resultsfile);
 	end
-	println("\n\n\nNew run: region=Europe, no transmission.")
-	runmodel(regionset=:europe8, carboncap=0.025, discountrate=0.07,
-				nuclearallowed=false, solarwindarea=1, transmissionallowed=:none, resultsfile=resultsfile);
 end
 
 # GIS paper figure 4
-function plot_gispaper_mixes1()
+function plot_gispaper_mixes1(runsuffix="_oct31", carboncap=0.025)
 	path = "D:\\model runs\\"
-	runsuffix = "_oct17"
 	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
 	scen = ["default", "high land"]
-	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile",
-					"discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile, solarwindarea=2"]
+	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile",
+					"discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile, solarwindarea=2"]
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="Europe")
 	scen = ["default", "high land"]
-	resultsnames = ["regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile",
-					"regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile, solarwindarea=2"]
+	resultsnames = ["regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile",
+					"regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile, solarwindarea=2"]
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="China")
 end
 
 # GIS paper figure 5
-function plot_gispaper_mixes2()
+function plot_gispaper_mixes2(runsuffix="_oct31", carboncap=0.025)
 	path = "D:\\model runs\\"
-	runsuffix = "_oct17"
 	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
 	scen = ["default", "no transmission"]
-	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile",
-					"regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile"]
+	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile",
+					"regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile"]
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="Europe")
 end
 
 # GIS paper figure 6
-function plot_gispaper_springmonth()
+function plot_gispaper_springmonth(runsuffix="_oct31", carboncap=0.025)
 	path = "D:\\model runs\\"
-	runsuffix = "_oct17"
 	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
-	r = loadresults("regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile", resultsfile=resultsfile)
+	r = loadresults("regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile", resultsfile=resultsfile)
 	annualelec, capac, tcapac, chart = analyzeresults(r)
 	chart(:FRA, xlims=(1872,1872+722), ylims=(0,207))
 end
 
 # GIS paper figures 3 and 7
-function plot_gispaper_classes1()
+function plot_gispaper_classes1(runsuffix="_oct31", carboncap=0.025)
 	path = "D:\\model runs\\"
-	runsuffix = "_oct17"
 	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
-	r = loadresults("regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile", resultsfile=resultsfile)
+	r = loadresults("transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile", resultsfile=resultsfile)
 	annualelec, capac, tcapac, chart = analyzeresults(r)
 	chart(:TOT)
 	chart(:BARS, ylims=(0,1150))
 end
 
 # GIS paper figure 3 and 8
-function plot_gispaper_classes2()
+function plot_gispaper_classes2(runsuffix="_oct31", carboncap=0.025)
 	path = "D:\\model runs\\"
-	runsuffix = "_oct17"
 	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
-	r = loadresults("discountrate=0.07, nuclearallowed=false, carboncap=0.025, resultsfile=$resultsfile", resultsfile=resultsfile)
+	r = loadresults("discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile", resultsfile=resultsfile)
 	annualelec, capac, tcapac, chart = analyzeresults(r)
 	chart(:TOT)
 	chart(:BARS, ylims=(0,1150))
@@ -340,9 +333,13 @@ function plot_lines1_paper()
 end
 
 # Figure 2 in the supergrid paper (fig 1 is the eurasia map).
-function plot_lines2_paper()
-	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
-	@load "iewcosts1_new.jld2" resultslist allstatus
+function plot_supergridpaper_lines()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct31"
+	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
+	# r = loadresults("regionset=Eurasia21, nuclearallowed=false, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]", resultsfile=resultsfile); sum(r.params[:demand])
+	totaldemand = 1.8695380613113698e7	# (GWh/yr) 
+	@load "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
 	res = resultslist
 	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
 	res0 = get(res,(true,1,:all,1),0)
@@ -354,46 +351,81 @@ function plot_lines2_paper()
 		cost = get(res,(a,b,c,d),NaN)						# M€/year
 		return cost > 1e7 ? NaN : cost/totaldemand*1000		# €/MWh
 	end
-	resmat1 = [getresults(true,1,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
+	# resmat1 = [getresults(true,1,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
 	resmat2 = [getresults(false,1,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
-	resmat3 = [getresults(true,4,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
-	resmat4 = [getresults(false,4,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
+	# resmat3 = [getresults(true,2,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
+	resmat4 = [getresults(false,2,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
 	carboncaps[1] = "none"
 
 	p = plot(string.(carboncaps), [resmat2 resmat4], color=[1 2 1 2], line=[:solid :solid :dash :dash])
-	display(plot(p, size=(850,450), ylim=(0,70), 
+	display(plot(p, size=(850,450), ylim=(0,60), 
 					label=["C" "S" "C-Hland" "S-Hland"],
 					line=3, tickfont=14, legendfont=14,
 					titlefont=16, guidefont=14, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]",
 					left_margin=50px, gridlinewidth=1))
-	p1 = plot(string.(carboncaps), resmat1, title="Unlimited nuclear, default solar & wind area")
+	# p1 = plot(string.(carboncaps), resmat1, title="Unlimited nuclear, default solar & wind area")
 	p2 = plot(string.(carboncaps), resmat2, title="Low solar & wind area", label=["" ""])
-	p3 = plot(string.(carboncaps), resmat3, title="Unlimited nuclear, high solar & wind area")
+	# p3 = plot(string.(carboncaps), resmat3, title="Unlimited nuclear, high solar & wind area")
 	p4 = plot(string.(carboncaps), resmat4, title="High solar & wind area", label=[:islands :all])
-	display(plot(p2, p4, layout=2, size=(1000,450), ylim=(0,70), line=3, tickfont=14, legendfont=14,
+	display(plot(p2, p4, layout=2, size=(1000,450), ylim=(0,60), line=3, tickfont=14, legendfont=14,
 					titlefont=16, guidefont=14, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]",
 					left_margin=50px, gridlinewidth=1))
-	display(plot(p3, p4, layout=2, size=(1000,450), ylim=(0.9,2.5), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
-					titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
+	# display(plot(p3, p4, layout=2, size=(1000,450), ylim=(0.9,2.5), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
+	# 				titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
+end
+
+function plot_supergridpaper_lines_transmission()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct31"
+	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
+	# r = loadresults("regionset=Eurasia21, nuclearallowed=false, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]", resultsfile=resultsfile); sum(r.params[:demand])
+	totaldemand = 1.8695380613113698e7	# (GWh/yr) 
+	@load "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
+	res = resultslist
+	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
+	res0 = get(res,(true,1,:all,1),0)
+	if res0 == 0
+		res0 = get(res,(false,1,:all,1),0)
+		res0 == 0 && error("No results for base case!")
+	end
+	function getresults(a,b,c,d)
+		cost = get(res,(a,b,c,d),NaN)						# M€/year
+		return cost > 1e7 ? NaN : cost/totaldemand*1000		# €/MWh
+	end
+	# resmat1 = [getresults(true,1,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
+	resmat2 = [getresults(false,1,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
+	# resmat3 = [getresults(true,2,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
+	resmat4 = [getresults(false,2,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
+	carboncaps[1] = "none"
+
+	p = plot(string.(carboncaps), [resmat2 resmat4], color=[3 1 2 3 1 2], line=[:solid :solid :solid :dash :dash :dash])
+	display(plot(p, size=(850,450), ylim=(0,60), 
+					label=["R" "C" "S" "R-Hland" "C-Hland" "S-Hland"],
+					line=3, tickfont=14, legendfont=14,
+					titlefont=16, guidefont=14, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]",
+					left_margin=50px, gridlinewidth=1))
 end
 
 # Figure 4 in the supergrid paper.
-function plot_bubbles_paper()
-	@load "iewcosts2.jld2" resultslist allstatus
+function plot_supergridpaper_bubbles()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct31"
+	@load "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
 	res = resultslist
 	# showall(keys(res))
 	rows = [3 3 3 2 2 2 1 1 1]
 	cols = [3 2 1 3 2 1 3 2 1]
 	r1 = [res[1,:islands,0.001,solar,battery]/res[1,:all,0.001,solar,battery]-1 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-	r2 = [res[4,:islands,0.001,solar,battery]/res[4,:all,0.001,solar,battery]-1 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-	annotations1 = [(rows[i]-0.65*sqrt(r1[i]), cols[i], text("$(round(r1[i]*100, digits=1))%", :right)) for i=1:9]
-	annotations2 = [(rows[i]-0.65*sqrt(r2[i]), cols[i], text("$(round(r2[i]*100, digits=1))%", :right)) for i=1:9]
-	s1 = scatter(rows, cols, markersize=reshape(sqrt.(r1)*75, (1,9)), annotations=annotations1, xlim=(0.4,3.4), ylim=(0.5,3.5), legend=false,
+	r2 = [res[2,:islands,0.001,solar,battery]/res[2,:all,0.001,solar,battery]-1 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
+	bs = 0.4	# bubble size
+	annotations1 = [(rows[i]-0.65*bs*sqrt(r1[i]*100/pi), cols[i], text("$(round(r1[i]*100, digits=1))%", :right)) for i=1:9]
+	annotations2 = [(rows[i]-0.65*bs*sqrt(r2[i]*100/pi), cols[i], text("$(round(r2[i]*100, digits=1))%", :right)) for i=1:9]
+	s1 = scatter(rows, cols, markersize=reshape(sqrt.(r1*100/pi)*75*bs, (1,9)), annotations=annotations1, xlim=(0.4,3.4), ylim=(0.5,3.5), legend=false,
 					title="Default solar & wind area", xlabel="battery cost", ylabel="solar PV cost", color=1,
 					tickfont=14, guidefont=14)
 	xticks!([1,2,3],["low","mid","high"])
 	yticks!([1,2,3],["low","mid","high"])
-	s2 = scatter(rows, cols, markersize=reshape(sqrt.(r2)*75, (1,9)), annotations=annotations2, xlim=(0.4,3.4), ylim=(0.5,3.5), legend=false,
+	s2 = scatter(rows, cols, markersize=reshape(sqrt.(r2*100/pi)*75*bs, (1,9)), annotations=annotations2, xlim=(0.4,3.4), ylim=(0.5,3.5), legend=false,
 					title="High solar & wind area", xlabel="battery cost", ylabel="solar PV cost", color=1,
 					tickfont=14, guidefont=14, left_margin=20px)
 	xticks!([1,2,3],["low","mid","high"])
@@ -403,17 +435,46 @@ function plot_bubbles_paper()
 end
 
 # Figure 3 in the supergrid paper.
-function plot_land_energymix()
+function plot_supergridpaper_energymix()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct31"
+	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
 	scen = ["C", "S", "C_Hland", "S_Hland"]
-	resultsnames = ["transmissionallowed=islands, nuclearallowed=false, carboncap=0.001",
-					"nuclearallowed=false, carboncap=0.001",
-					"transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, solarwindarea=4",
-					"nuclearallowed=false, carboncap=0.001, solarwindarea=4"]
-	resultsfile = "iewruns1_new.jld2"
+	resultsnames = ["regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=Eurasia21, nuclearallowed=false, carboncap=0.001, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=Eurasia21, nuclearallowed=false, carboncap=0.001, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]"]
 	plot_energymix(scen, resultsnames, resultsfile)  #, deletetechs=[1,2,6,7,12])
 end
 
-function plot_energymix(scen, resultsnames, resultsfile; deletetechs=[])
+function plot_supergridpaper_energymix_transmission()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct31"
+	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
+	scen = ["R", "C", "S", "R-Hland", "C-Hland", "S-Hland"]
+	resultsnames = ["regionset=Eurasia21, transmissionallowed=none, nuclearallowed=false, carboncap=0.1, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.1, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=Eurasia21, nuclearallowed=false, carboncap=0.1, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=Eurasia21, transmissionallowed=none, nuclearallowed=false, carboncap=0.1, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.1, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=Eurasia21, nuclearallowed=false, carboncap=0.1, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]"]
+	plot_energymix(scen, resultsnames, resultsfile; size=(750,550))  #, deletetechs=[1,2,6,7,12])
+end
+
+function plot_supergridpaper_energymix_transmission2()
+	path = "D:\\model runs\\"
+	runsuffix = "_oct31"
+	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
+	scen = ["C", "S", "R-Hland", "C-Hland", "S-Hland"]
+	resultsnames = ["regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.05, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=Eurasia21, nuclearallowed=false, carboncap=0.05, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=Eurasia21, transmissionallowed=none, nuclearallowed=false, carboncap=0.05, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.05, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
+					"regionset=Eurasia21, nuclearallowed=false, carboncap=0.05, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]"]
+	plot_energymix(scen, resultsnames, resultsfile; size=(750,550))  #, deletetechs=[1,2,6,7,12])
+end
+
+function plot_energymix(scen, resultsnames, resultsfile; deletetechs=[], optionlist...)
 	scenelec, demands, hoursperperiod, displayorder, techlabels = iew_getscenarioresults(scen, resultsnames, resultsfile)
 
 	palette = [RGB([216,137,255]/255...), RGB([119,112,71]/255...), RGB([199,218,241]/255...), RGB([149,179,215]/255...),
@@ -424,8 +485,9 @@ function plot_energymix(scen, resultsnames, resultsfile; deletetechs=[])
 	techlabels = permutedims(deleteat!(vec(techlabels), deletetechs))
 	deleteat!(displayorder, deletetechs)
 
-	groupedbarflip(collect(scenelec[displayorder,:]')/1e6, label=techlabels, bar_position = :stack, size=(600,550),
-			left_margin=20px, xticks=(1:length(scen),scen), line=0, tickfont=12, legendfont=12, guidefont=12, color_palette=palette, ylabel="[PWh/year]")
+	stackedbar(collect(scenelec[displayorder,:]')/1e6; label=techlabels, size=(600,550), left_margin=20px,
+		xticks=(1:length(scen),scen), line=0, tickfont=12, legendfont=12, guidefont=12, color_palette=palette,
+		ylabel="[PWh/year]", optionlist...)
 	xpos = (1:length(scen))'
 	lab = fill("",(1,length(scen)))
 	lab[1] = "demand"
