@@ -239,7 +239,7 @@ function makeparameters(sets, options, hourinfo)
 		:battery		150			0.1				1.5			10			0.9			1	# 1h discharge time, 150 €/kW = 150 €/kWh
 		:pv				600			0				16			25			1			1
 		:pvroof			900			0				20			25			1			1
-		:csp			3600		0				35			30			1			1	# for solar multiple=2, storage=3 hours
+		:csp			3800		0				35			30			1			1	# for solar multiple=2, storage=3 hours
 		:hydro			10			0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 
 	]
 	techs = techtable[:,1]
@@ -317,9 +317,9 @@ function makeparameters(sets, options, hourinfo)
 	# Costs vary with the solar multiple (collector field size) and thermal storage capacity (in hours).
 	# Fit a linear function of these parameters to the cost table in (IRENA 2012, table 4.1 page 14), see CSP cost analysis.xlsx.
 	# Assume solar field costs are 30% of total costs and storage about 15% of total costs (roughly inline with IRENA 2012, fig 4.4).
-	# Then assume a 20% cost reduction to 2050.
-	# (The base plant in the cost table above has solar multiple = 2 and storage = 3 hours.)
-	# Resulting cost for a plant with solar multiple = 3 and storage = 9 hours:  5977 €/kW.
+	# Then assume a 20-30% cost reduction to 2050.
+	# (The base plant in the cost table above at 3800 €/kW has solar multiple = 2 and storage = 3 hours.)
+	# Resulting cost for a plant with solar multiple = 3 and storage = 9 hours:  about 5500 €/kW.
 	investcost[:csp,:] = investcost[:csp,:] * (0.55 + 0.3*cspsolarmultiple/2.0 + 0.15*cspthermalstoragehours/3.0)
 
 	cf[:,:csp,:,:] = cf[:,:csp,:,:] * cspsolarmultiple							# OK if this surpasses 100%
