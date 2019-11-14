@@ -94,7 +94,7 @@ function makeparameters(sets, options, hourinfo)
 	initialstoragelevel = 0.7		# make this tech dependent later
 	minflow_existinghydro = 0.4
 	cspsolarmultiple = 3.0			# peak capacity of collectors divided by turbine power
-	cspthermalstoragehours = 9
+	cspthermalstoragehours = 12
 
 	numregions = length(REGION)
 	nhours = length(HOUR)
@@ -239,7 +239,7 @@ function makeparameters(sets, options, hourinfo)
 		:battery		150			0.1				1.5			10			0.9			1	# 1h discharge time, 150 €/kW = 150 €/kWh
 		:pv				600			0				16			25			1			1
 		:pvroof			900			0				20			25			1			1
-		:csp			3800		0				35			30			1			1	# for solar multiple=2, storage=3 hours
+		:csp			6000		0				35			30			1			1	# for solar multiple=3, storage=12 hours
 		:hydro			10			0				0			80			1			1	# small artificial investcost so it doesn't overinvest in free capacity 
 	]
 	techs = techtable[:,1]
@@ -313,14 +313,13 @@ function makeparameters(sets, options, hourinfo)
 		investcost[k,6:10] .+= 200
 	end
 
-	# CSP solar tower cost analysis: 
+	# CSP solar tower cost analysis (see CSP cost analysis.xlsx): 
 	# Costs vary with the solar multiple (collector field size) and thermal storage capacity (in hours).
-	# Fit a linear function of these parameters to the cost table in (IRENA 2012, table 4.1 page 14), see CSP cost analysis.xlsx.
-	# Assume solar field costs are 30% of total costs and storage about 15% of total costs (roughly inline with IRENA 2012, fig 4.4).
-	# Then assume a 20-30% cost reduction to 2050.
-	# (The base plant in the cost table above at 3800 €/kW has solar multiple = 2 and storage = 3 hours.)
-	# Resulting cost for a plant with solar multiple = 3 and storage = 9 hours:  about 5500 €/kW.
-	investcost[:csp,:] = investcost[:csp,:] * (0.55 + 0.3*cspsolarmultiple/2.0 + 0.15*cspthermalstoragehours/3.0)
+	# Assume a solar tower plant with solar multiple = 3 and storage = 12 hours costs 9200 USD/kW (2010).
+	# Then assume solar field costs are 35% of total costs and storage about 10% of total costs (roughly inline with IRENA 2012, fig 4.4)
+	# for this plant, and that costs for plants with other parameters vary linearly with solar multiple and storage size.
+	# Finally convert to euro (1.15 USD/EUR) and assume a cost reduction of 25% to 2050. Resulting cost for a 3/12 solar tower: 6000 €/kW.
+	investcost[:csp,:] = investcost[:csp,:] * (0.55 + 0.35*cspsolarmultiple/3 + 0.10*cspthermalstoragehours/12)
 
 	cf[:,:csp,:,:] = cf[:,:csp,:,:] * cspsolarmultiple							# OK if this surpasses 100%
 	classlimits[:,:csp,:] = classlimits[:,:csp,:] / cspsolarmultiple			# GIS data calculated as peak solar power

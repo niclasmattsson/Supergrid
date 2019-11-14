@@ -55,7 +55,7 @@ function supergridruns1(hourinterval)
 	resultslist = Dict()
 	allstatus = Dict()
 	path = "D:\\model runs\\"
-	runsuffix = "_oct31"
+	runsuffix = "_nov14"
 	runcount = 0
 	for nuc in [false]
 		for solarwind in [1, 2]
@@ -88,7 +88,7 @@ function supergridruns2(hourinterval)
 	resultslist = Dict()
 	allstatus = Dict()
 	path = "D:\\model runs\\"
-	runsuffix = "_oct31"
+	runsuffix = "_nov14"
 	for nuc in [false]
 		for solarwind in [1, 2]
 			for tm in [:islands, :all]
@@ -164,67 +164,69 @@ function supergridruns_biotest(hourinterval)
 	results, allstatus
 end
 
-function gispaperruns(runsuffix="_oct31")
+function gispaperruns(runsuffix="_nov14", discountrate=0.07)
 	path = "D:\\model runs\\"
 	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
-	for region in [:China6, :Europe8], carboncap in [0.025, 0.005, 0.001], landarea in [1, 2]
-		println("\n\n\nNew run: region=$region, carboncap=$carboncap, landarea=$landarea.")
-		runmodel(regionset=region, carboncap=carboncap, discountrate=0.07,
+	for carboncap in [0.025], landarea in [1, 2], region in [:China6, :Europe8]
+		println("\n\n\nNew run: carboncap=$carboncap, landarea=$landarea, region=$region.")
+		runmodel(regionset=region, carboncap=carboncap, discountrate=discountrate,
 						nuclearallowed=false, solarwindarea=landarea, resultsfile=resultsfile);
-		println("\n\n\nNew run: region=$region, carboncap=$carboncap, landarea=$landarea, no transmission.")
-		runmodel(regionset=region, carboncap=carboncap, discountrate=0.07,
-				nuclearallowed=false, solarwindarea=landarea, transmissionallowed=:none, resultsfile=resultsfile);
+		if region == :Europe8
+			println("\n\n\nNew run: carboncap=$carboncap, landarea=$landarea, region=$region, no transmission.")
+			runmodel(regionset=region, carboncap=carboncap, discountrate=discountrate,
+					nuclearallowed=false, solarwindarea=landarea, transmissionallowed=:none, resultsfile=resultsfile);
+		end
 	end
 end
 
 # GIS paper figure 4
-function plot_gispaper_mixes1(runsuffix="_oct31", carboncap=0.025)
+function plot_gispaper_mixes1(runsuffix="_nov14", carboncap=0.025, discountrate=0.07)
 	path = "D:\\model runs\\"
 	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
 	scen = ["default", "high land"]
-	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile",
-					"discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile, solarwindarea=2"]
+	resultsnames = ["discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile",
+					"discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile, solarwindarea=2"]
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="Europe")
 	scen = ["default", "high land"]
-	resultsnames = ["regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile",
-					"regionset=China6, discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile, solarwindarea=2"]
+	resultsnames = ["regionset=China6, discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile",
+					"regionset=China6, discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile, solarwindarea=2"]
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="China")
 end
 
 # GIS paper figure 5
-function plot_gispaper_mixes2(runsuffix="_oct31", carboncap=0.025)
+function plot_gispaper_mixes2(runsuffix="_nov14", carboncap=0.025, discountrate=0.07)
 	path = "D:\\model runs\\"
 	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
 	scen = ["default", "no transmission"]
-	resultsnames = ["discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile",
-					"regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile"]
+	resultsnames = ["discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile",
+					"transmissionallowed=none, discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile"]
 	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="Europe")
 end
 
 # GIS paper figure 6
-function plot_gispaper_springmonth(runsuffix="_oct31", carboncap=0.025)
+function plot_gispaper_springmonth(runsuffix="_nov14", carboncap=0.025, discountrate=0.07)
 	path = "D:\\model runs\\"
 	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
-	r = loadresults("regionset=europe8, transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile", resultsfile=resultsfile)
+	r = loadresults("transmissionallowed=none, discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile", resultsfile=resultsfile)
 	annualelec, capac, tcapac, chart = analyzeresults(r)
-	chart(:FRA, xlims=(1872,1872+722), ylims=(0,207))
+	chart(:FRA, xlims=(1872,1872+722), ylims=(0,255))
 end
 
 # GIS paper figures 3 and 7
-function plot_gispaper_classes1(runsuffix="_oct31", carboncap=0.025)
+function plot_gispaper_classes1(runsuffix="_nov14", carboncap=0.025, discountrate=0.07)
 	path = "D:\\model runs\\"
 	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
-	r = loadresults("transmissionallowed=none, discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile", resultsfile=resultsfile)
+	r = loadresults("transmissionallowed=none, discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile", resultsfile=resultsfile)
 	annualelec, capac, tcapac, chart = analyzeresults(r)
 	chart(:TOT)
 	chart(:BARS, ylims=(0,1150))
 end
 
 # GIS paper figure 3 and 8
-function plot_gispaper_classes2(runsuffix="_oct31", carboncap=0.025)
+function plot_gispaper_classes2(runsuffix="_nov14", carboncap=0.025, discountrate=0.07)
 	path = "D:\\model runs\\"
 	resultsfile = "$(path)gispaper_mixes$runsuffix.jld2"
-	r = loadresults("discountrate=0.07, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile", resultsfile=resultsfile)
+	r = loadresults("discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile", resultsfile=resultsfile)
 	annualelec, capac, tcapac, chart = analyzeresults(r)
 	chart(:TOT)
 	chart(:BARS, ylims=(0,1150))
@@ -335,7 +337,7 @@ end
 # Figure 2 in the supergrid paper (fig 1 is the eurasia map).
 function plot_supergridpaper_lines()
 	path = "D:\\model runs\\"
-	runsuffix = "_oct31"
+	runsuffix = "_nov14"
 	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
 	# r = loadresults("regionset=Eurasia21, nuclearallowed=false, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]", resultsfile=resultsfile); sum(r.params[:demand])
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) 
@@ -376,7 +378,7 @@ end
 
 function plot_supergridpaper_lines_transmission()
 	path = "D:\\model runs\\"
-	runsuffix = "_oct31"
+	runsuffix = "_nov14"
 	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
 	# r = loadresults("regionset=Eurasia21, nuclearallowed=false, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]", resultsfile=resultsfile); sum(r.params[:demand])
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) 
@@ -409,7 +411,7 @@ end
 # Figure 4 in the supergrid paper.
 function plot_supergridpaper_bubbles()
 	path = "D:\\model runs\\"
-	runsuffix = "_oct31"
+	runsuffix = "_nov14"
 	@load "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
 	res = resultslist
 	# showall(keys(res))
@@ -437,7 +439,7 @@ end
 # Figure 3 in the supergrid paper.
 function plot_supergridpaper_energymix()
 	path = "D:\\model runs\\"
-	runsuffix = "_oct31"
+	runsuffix = "_nov14"
 	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
 	scen = ["C", "S", "C_Hland", "S_Hland"]
 	resultsnames = ["regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
@@ -449,7 +451,7 @@ end
 
 function plot_supergridpaper_energymix_transmission()
 	path = "D:\\model runs\\"
-	runsuffix = "_oct31"
+	runsuffix = "_nov14"
 	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
 	scen = ["R", "C", "S", "R-Hland", "C-Hland", "S-Hland"]
 	resultsnames = ["regionset=Eurasia21, transmissionallowed=none, nuclearallowed=false, carboncap=0.1, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
@@ -463,7 +465,7 @@ end
 
 function plot_supergridpaper_energymix_transmission2()
 	path = "D:\\model runs\\"
-	runsuffix = "_oct31"
+	runsuffix = "_nov14"
 	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
 	scen = ["C", "S", "R-Hland", "C-Hland", "S-Hland"]
 	resultsnames = ["regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.05, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
