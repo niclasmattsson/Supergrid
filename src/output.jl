@@ -159,10 +159,10 @@ function analyzeresults(results::Results)
 			println("Regional system cost per MWh generated (€/MWh):")
 			display(round.(lcoe, digits=2))
 
-			stackedbar(String.(REGION), collect(annualelec[displayorder,1:end-1]'/1000); labels=techlabels, size=(900,550),
-				line=0, tickfont=14, legendfont=14, color_palette=palette, yformatter=:plain, optionlist...)
-
 			lr = length(REGION)
+			stackedbar(String.(REGION), collect(annualelec[displayorder,1:end-1]'/1000); labels=techlabels, size=(340+70*lr,550), left_margin=25px,
+				line=0, tickfont=14, legendfont=14, guidefont=14, color_palette=palette, ylabel="TWh/year", yformatter=:plain, optionlist...)
+
 			xpos = (1:lr)' .- 0.5
 			demandtext = ["demand" permutedims(repeat([""],lr-1))]
 			display(plot!([xpos; xpos], [zeros(lr)'; sum(demand,dims=2)'*hoursperperiod/1000], line=3, color=:black,
@@ -215,8 +215,8 @@ function analyzeresults(results::Results)
 			classes = (k == :offwind || k == :pvroof) ? CLASS[k][1:length(CLASS[k])÷2] : CLASS[k]
 			used = [sum(Capacity[r,k,c] for r in REGION[regs]) for c in classes]
 			lims = [sum(k == :hydro ? hydrocapacity[r,c] : classlimits[r,k,c] for r in REGION[regs]) for c in classes]
-			stackedbar!(String.(classes), [used lims-used]; subplot=i, title=labellookup[k], 
-							line=0, color_palette=colors, bottom_margin=30px, optionlist...)
+			stackedbar!(String.(classes), [used lims-used]; subplot=i, title=labellookup[k], tickfont=14, legendfont=14, guidefont=14,
+							ylabel="GW", line=0, color_palette=colors, bottom_margin=30px, optionlist...)
 		end
 		display(composite)
 
@@ -235,12 +235,12 @@ function analyzeresults(results::Results)
 		reglevel = sumdimdrop(level[:,regs], dims=2)
 		# display(plot(HOUR,[regcharge regelec[:,12] reglevel],size=(1850,950)))
 
-		stackedarea(HOUR, regelec; labels=techlabels, size=(900,550), line=(0.03,1,:black), tickfont=16, legendfont=16,
-									color_palette=palette, optionlist...)
+		stackedarea(HOUR, regelec; labels=techlabels, size=(900,550), line=(0.03,1,:black), tickfont=14, legendfont=14, guidefont=14,
+									xlabel="hour of year", ylabel="GW", yformatter=:plain, color_palette=palette, optionlist...)
 		plotbatterycharge && plot!(HOUR, -regcharge, color=RGB([157,87,205]/255...))
 		plotbatterylevel && plot!(HOUR, reglevel, line=(:black,:dash))
 		# plot!(HOUR, regdischarge, color=:green)
-		display(plot!(HOUR, regdemand, c=:black, label="demand"))
+		display(plot!(HOUR, regdemand, c=:black, line=2, label="demand"))
 		nothing
 	end
 
@@ -265,7 +265,7 @@ function chart_energymix_scenarios(scenarios, resultsnames, resultsfile; size=(9
 
 	stackedbar(collect(scenelec[displayorder,:]')/1e3, label=techlabels, size=size, left_margin=20px,
 			xticks=(1:numscen,scenarios), line=0, tickfont=12, legendfont=12, guidefont=12,
-			color_palette=palette, ylabel="[TWh/year]", yformatter=:plain; options...)
+			color_palette=palette, ylabel="TWh/year", yformatter=:plain; options...)
 	xpos = (1:numscen)'
 	lab = fill("",(1,numscen))
 	lab[1] = "demand"

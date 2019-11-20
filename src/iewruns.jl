@@ -186,11 +186,11 @@ function plot_gispaper_mixes1(runsuffix="_nov14", carboncap=0.025, discountrate=
 	scen = ["default", "high land"]
 	resultsnames = ["discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile",
 					"discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile, solarwindarea=2"]
-	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="Europe")
+	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(480,550), bar_width=0.7, xlims=(0.3,2.7), title="Europe")
 	scen = ["default", "high land"]
 	resultsnames = ["regionset=China6, discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile",
 					"regionset=China6, discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile, solarwindarea=2"]
-	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="China")
+	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(480,550), bar_width=0.7, xlims=(0.3,2.7), title="China")
 end
 
 # GIS paper figure 5
@@ -200,7 +200,7 @@ function plot_gispaper_mixes2(runsuffix="_nov14", carboncap=0.025, discountrate=
 	scen = ["default", "no transmission"]
 	resultsnames = ["discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile",
 					"transmissionallowed=none, discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile"]
-	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(500,550), xlims=(0.3,2.7), title="Europe")
+	chart_energymix_scenarios(scen, resultsnames, resultsfile, size=(480,550), bar_width=0.7, xlims=(0.3,2.7), title="Europe")
 end
 
 # GIS paper figure 6
