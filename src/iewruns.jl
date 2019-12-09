@@ -210,6 +210,7 @@ function plot_gispaper_springmonth(runsuffix="_nov14", carboncap=0.025, discount
 	r = loadresults("transmissionallowed=none, discountrate=$discountrate, nuclearallowed=false, carboncap=$carboncap, resultsfile=$resultsfile", resultsfile=resultsfile)
 	annualelec, capac, tcapac, chart = analyzeresults(r)
 	chart(:FRA, xlims=(1872,1872+722), ylims=(0,255))
+	chart(:SPA, xlims=(1872,1872+722), ylims=(0,120))
 end
 
 # GIS paper figures 3 and 7
