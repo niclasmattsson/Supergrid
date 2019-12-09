@@ -153,8 +153,9 @@ function analyzeresults(results::Results)
 
 	function chart(country::Symbol; plotstoragetech=:none, plotbatterycharge=false, plotbatterylevel=false, optionlist...)
 		if country == :BARS
-			regcost = Systemcost ./ vec(sum(annualelec, dims=1)[1:end-1]) * 1000
-			totcost = sum(Systemcost) / sum(annualelec[:,:TOTAL]) * 1000
+			existinghydro = vec(sum(Electricity[:hydro,:x0], dims=1))
+			regcost = Systemcost ./ (vec(sum(annualelec, dims=1)[1:end-1]) - existinghydro) * 1000
+			totcost = sum(Systemcost) / (sum(annualelec[:,:TOTAL]) - sum(existinghydro)) * 1000
 			lcoe = NamedArray(collect([regcost; totcost]'), (["system cost (€/MWh)"], [REGION; :TOTAL]))
 			println("Regional system cost per MWh generated (€/MWh):")
 			display(round.(lcoe, digits=2))
@@ -176,7 +177,7 @@ function analyzeresults(results::Results)
 				display(plot!([xpos; xpos], [zeros(4)'; totdemand*hoursperperiod/1e3], line=3, color=:black, labels=permutedims(repeat([""],4))))
 				totcost2 = [sum(Systemcost[1:8]) sum(Systemcost[9:15]) sum(Systemcost[16:21]) sum(Systemcost)]
 				lcoe_tot = NamedArray(totcost2./totdemand * 1000, (["system cost (€/MWh)"], ["EU","CAS","China","TOTAL"]))
-				println("\nSystem cost per MWh demand (€/MWh):")
+				println("\nSystem cost per MWh demand (€/MWh):  (subtract existinghydro, see code above)")
 				display(round.(lcoe_tot, digits=2))
 			else
 				stackedbar(["TOTAL"], collect(annualelec[displayorder,:TOTAL]')/1e3; labels=techlabels, left_margin=30px,
