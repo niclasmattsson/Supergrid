@@ -116,17 +116,10 @@ function makeparameters(sets, options, hourinfo)
 	nhydro = length(CLASS[:hydro])
 	nclasses = length(CLASS[:pv])
 
-	path = joinpath(dirname(@__FILE__), "..")
-
 	activeregions = [r in REGION for r in dataregions]
-
-	# read regional distances and SSP data from Matlab file
-	inputdata = getdatafolder(options)
-	distancevars = matread(joinpath(inputdata, "distances_$regionset.mat"))
-	population = vec(distancevars["population"])[activeregions]		# Mpeople in SSP2 2050
-	sspdemand = vec(distancevars["demand"])[activeregions]			# TWh/year (demand in SSP2 2050 major regions downscaled to countries using BP 2017 stats)
-
 	demand = AxisArray(zeros(numregions, nhours), REGION, HOUR)		# GW
+
+	inputdata = getdatafolder(options)
 
 	# read synthetic demand data (using local time) and shift to UTC
 	# (note: not currently based on same year as solar & wind data!!!)
@@ -212,6 +205,8 @@ function makeparameters(sets, options, hourinfo)
 	end
 	cfhydroinflow[cfhydroinflow .< 0.01] = zeros(sum(cfhydroinflow .< 0.01))
 
+	# read regional distances from Matlab file
+	distancevars = matread(joinpath(inputdata, "distances_$regionset.mat"))
 	distances = distancevars["distances"][activeregions,activeregions]
 	connected = distancevars["connected"][activeregions,activeregions]
 	connectedoffshore = distancevars["connectedoffshore"][activeregions,activeregions]
