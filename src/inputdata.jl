@@ -1,12 +1,27 @@
-using MAT, HDF5, DelimitedFiles, Statistics, Dates, TimeZones
+using MAT, HDF5, DelimitedFiles, Statistics, Dates, TimeZones, Pkg.TOML
+
+# If options[:datafolder] is set, then use that path. If not, use path listed in HOMEDIR/.GlobalEnergyGIS_config if available.
+# Otherwise, fall back to Supergrid/inputdata where data for Europe8 is supplied.
+function getdatafolder(options)
+    if options[:datafolder] == ""
+        configfile = joinpath(homedir(), ".GlobalEnergyGIS_config")
+        if isfile(configfile)
+            return TOML.parsefile(configfile)["datafolder"]
+        else
+            return abspath(dirname(@__FILE__), "..", "inputdata")
+        end
+    else
+        return options[:datafolder]
+    end
+end
 
 # eurasia21 regions for reference
 # :NOR,:FRA,:GER,:UK,:MED,:BAL,:SPA,:CEN,:BUK,:TCC,:KZK,:CAS,:RU_C,:RU_SW,:RU_VL,:CH_N,:CH_NE,:CH_E,:CH_SC,:CH_SW,:CH_NW
 
 function makesets(hourinfo, options)
 	@unpack regionset, disableregions = options
-	path = joinpath(dirname(@__FILE__), "..")
-	distancevars = matread("$path/inputdata/distances_$regionset.mat")
+	inputdata = getdatafolder(options)
+	distancevars = matread(joinpath(inputdata, "distances_$regionset.mat"))
 	dataregions = Symbol.(vec(distancevars["regionlist"]))
 	regionlist = setdiff(dataregions, disableregions)
 	makesets(regionlist, dataregions, hourinfo, options)
@@ -20,8 +35,8 @@ function makesets(REGION, dataregions, hourinfo, options)
 		:fuel => [:_,   :_,      :_,       :_,    :_,       :_,        :coal,    :gas,     :gas,     :biogas,  :biogas,  :uranium, :_]
 	)
 
-	path = joinpath(dirname(@__FILE__), "..")
-	hydrovars = matread("$path/inputdata/GISdata_hydro_$regionset.mat")
+	inputdata = getdatafolder(options)
+	hydrovars = matread(joinpath(inputdata, "GISdata_hydro_$regionset.mat"))
 	_, ncostclasses, nreservoirclasses = size(hydrovars["potentialcapac"])
 	nvreclasses = 5
 
@@ -106,7 +121,8 @@ function makeparameters(sets, options, hourinfo)
 	activeregions = [r in REGION for r in dataregions]
 
 	# read regional distances and SSP data from Matlab file
-	distancevars = matread("$path/inputdata/distances_$regionset.mat")
+	inputdata = getdatafolder(options)
+	distancevars = matread(joinpath(inputdata, "distances_$regionset.mat"))
 	population = vec(distancevars["population"])[activeregions]		# Mpeople in SSP2 2050
 	sspdemand = vec(distancevars["demand"])[activeregions]			# TWh/year (demand in SSP2 2050 major regions downscaled to countries using BP 2017 stats)
 
@@ -135,7 +151,7 @@ function makeparameters(sets, options, hourinfo)
 	for (i,reg) in enumerate(REGION)
 		dataregionindex = findfirst(dataregions .== reg)
 		regionmod = lowercase(string(regionset)) == "china6" ? 15 : 0	# use eurasia21 demand files for now
-		data = readdlm("$path/inputdata/syntheticdemand/synthetic2050_region$(dataregionindex+regionmod)_$reg.csv", ',')
+		data = readdlm(joinpath(inputdata, "syntheticdemand", "synthetic2050_region$(dataregionindex+regionmod)_$reg.csv"), ',')
 		demandlocaltime = data[2:end, 2]
 		timezone = TimeZone(zones[dataregionindex])
 		localtime = [astimezone(ut, timezone) for ut in utc]
@@ -146,7 +162,7 @@ function makeparameters(sets, options, hourinfo)
 		# println("$reg ($i): ", sspdemand[i], " ", mean(demand[i,:])*8760/1000)	# check total regional demand
 	end
 
-	hydrovars = matread("$path/inputdata/GISdata_hydro_$regionset.mat")
+	hydrovars = matread(joinpath(inputdata, "GISdata_hydro_$regionset.mat"))
 	hydrocapacity = AxisArray(zeros(numregions,nhydro), REGION, CLASS[:hydro])
 	hydroeleccost = AxisArray(zeros(numregions,nhydro), REGION, CLASS[:hydro])
 	monthlyinflow = AxisArray(zeros(numregions,nhydro,12), REGION, CLASS[:hydro], 1:12)
@@ -272,8 +288,8 @@ function makeparameters(sets, options, hourinfo)
 	emissionsCO2[[:coal,:gas]] = [0.330, 0.202]		# kgCO2/kWh fuel (or ton/MWh or kton/GWh)
 
 	# do something with B classes (and pvrooftop) later
-	windvars = matread("$path/inputdata/GISdata_wind$(datayear)_$regionset$inputdatasuffix.mat")
-	solarvars = matread("$path/inputdata/GISdata_solar$(datayear)_$regionset$inputdatasuffix.mat")
+	windvars = matread(joinpath(inputdata, "GISdata_wind$(datayear)_$regionset$inputdatasuffix.mat"))
+	solarvars = matread(joinpath(inputdata, "GISdata_solar$(datayear)_$regionset$inputdatasuffix.mat"))
 
 	allclasses = union(sets.CLASS[:pv], sets.CLASS[:hydro], [:_])
 	cf = AxisArray(ones(numregions,length(TECH),length(allclasses),nhours), REGION, TECH, allclasses, HOUR)
