@@ -6,7 +6,7 @@ function getdatafolder(options)
     if options[:datafolder] == ""
         configfile = joinpath(homedir(), ".GlobalEnergyGIS_config")
         if isfile(configfile)
-            return TOML.parsefile(configfile)["datafolder"]
+            return joinpath(TOML.parsefile(configfile)["datafolder"], "output")
         else
             return abspath(dirname(@__FILE__), "..", "inputdata")
         end
