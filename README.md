@@ -9,11 +9,11 @@ First, install the [CPLEX](https://developer.ibm.com/docloud/blog/2019/07/04/cpl
 Next, type `]` to enter Julia's package mode, then:
 
 ```
-(v1.2) pkg> add JuMP@0.18.6
+(v1.3.1) pkg> add JuMP@0.18.6
 
-(v1.2) pkg> add AxisArrays
+(v1.3.1) pkg> add AxisArrays
 
-(v1.2) pkg> add https://github.com/niclasmattsson/Supergrid
+(v1.3.1) pkg> add https://github.com/niclasmattsson/Supergrid
 ```
 
 Grab some coffee, because installing and compiling dependencies can take quite some time to run.
@@ -56,6 +56,7 @@ defaultoptions() = Dict(
     :rampingcosts => false,
     :disabletechs => [],
     :disableregions => [],
+    :datafolder => "",                  # Full path to GIS input data. Set to "" to use the folder in HOMEDIR/.GlobalEnergyGIS_config.
     :resultsfile => "results.jld2"      # use "" to skip saving the results in the database
 )
 ```
