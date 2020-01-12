@@ -144,7 +144,8 @@ function makeparameters(sets, options, hourinfo)
 	for (i,reg) in enumerate(REGION)
 		dataregionindex = findfirst(dataregions .== reg)
 		regionmod = lowercase(string(regionset)) == "china6" ? 15 : 0	# use eurasia21 demand files for now
-		data = readdlm(joinpath(inputdata, "syntheticdemand", "synthetic2050_region$(dataregionindex+regionmod)_$reg.csv"), ',')
+		syntheticdemand = abspath(dirname(@__FILE__), "..", "inputdata", "syntheticdemand")
+		data = readdlm(joinpath(syntheticdemand, "synthetic2050_region$(dataregionindex+regionmod)_$reg.csv"), ',')
 		demandlocaltime = data[2:end, 2]
 		timezone = TimeZone(zones[dataregionindex])
 		localtime = [astimezone(ut, timezone) for ut in utc]
