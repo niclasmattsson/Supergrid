@@ -50,7 +50,7 @@ function saveresults(results::Results, runname; resultsfile="", group="", compre
 		group *= "/"
 	end
 	runname = "$group$runname"
-	jldopen(resultsfile, "a+", compress=compress) do file
+	JLD2.jldopen(resultsfile, "a+", compress=compress) do file
 		if haskey(file, runname)
 			@warn "The run $runname already exists in $resultsfile (new run not saved to disk). "
 		else
@@ -64,7 +64,7 @@ function listresults(; resultsfile="results.jld2", group="")
 	if !isempty(group) && group[end] != '/'
 		group *= "/"
 	end
-	jldopen(resultsfile, "r") do file
+	JLD2.jldopen(resultsfile, "r") do file
 		display(file)
 	end
 	return nothing
@@ -81,7 +81,7 @@ function loadresults(runname::String; resultsfile="results.jld2", group="")
 	end
 	runname = "$group$runname"
 	results = nothing
-	jldopen(resultsfile, "r") do file
+	JLD2.jldopen(resultsfile, "r") do file
 		if haskey(file, runname)
 			results = file[runname]
 		else

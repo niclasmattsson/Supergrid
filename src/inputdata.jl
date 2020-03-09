@@ -1,4 +1,4 @@
-using MAT, HDF5, DelimitedFiles, Statistics, Dates, TimeZones, Pkg.TOML
+using MAT, HDF5, JLD, DelimitedFiles, Statistics, Dates, TimeZones, Pkg.TOML
 
 # If options[:datafolder] is set, then use that path. If not, use path listed in HOMEDIR/.GlobalEnergyGIS_config if available.
 # Otherwise, fall back to Supergrid/inputdata where data for Europe8 is supplied.
@@ -121,39 +121,10 @@ function makeparameters(sets, options, hourinfo)
 
 	inputdata = getdatafolder(options)
 
-	# read synthetic demand data (using local time) and shift to UTC
-	# (note: not currently based on same year as solar & wind data!!!)
-	# If time zone code errors then do the following, see https://timezonesjl.readthedocs.io/en/stable/faq/
-	# The error:
-	#		ERROR: UnhandledTimeError: TimeZone Europe/Oslo does not handle dates on or after 2038-03-28T01:00:00 UTC
-	# The fix:
-	#		Pkg.add("TimeZones")
-	# 		using TimeZones
-	# 		TimeZones.TZData.compile(max_year=2200)
-	if lowercase(string(regionset)) == "europe8"		# Generalize this later, maybe in GIS preprocessing.
-		zones = ["Europe/Oslo","Europe/Paris","Europe/Berlin","Europe/London","Europe/Rome","Europe/Warsaw","Europe/Madrid","Europe/Budapest"]
-	elseif lowercase(string(regionset)) == "china6"
-		zones = ["Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai"]	
-	elseif lowercase(string(regionset)) == "eurasia21"
-		zones = ["Europe/Oslo","Europe/Paris","Europe/Berlin","Europe/London","Europe/Rome","Europe/Warsaw","Europe/Madrid","Europe/Budapest","Europe/Sofia","Europe/Istanbul","Asia/Almaty","Asia/Ashgabat","Europe/Moscow","Europe/Moscow","Europe/Moscow","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai","Asia/Shanghai"]	
-	else
-		error("Need to add time zone info for $regionset.")
-	end
-	hourrange = DateTime(2050,1,1,0):Hour(1):DateTime(2050,12,31,23)
-	utc = [ZonedDateTime(h, TimeZone("UTC")) for h in hourrange]
-	for (i,reg) in enumerate(REGION)
-		dataregionindex = findfirst(dataregions .== reg)
-		regionmod = lowercase(string(regionset)) == "china6" ? 15 : 0	# use eurasia21 demand files for now
-		syntheticdemand = abspath(dirname(@__FILE__), "..", "inputdata", "syntheticdemand")
-		data = readdlm(joinpath(syntheticdemand, "synthetic2050_region$(dataregionindex+regionmod)_$reg.csv"), ',')
-		demandlocaltime = data[2:end, 2]
-		timezone = TimeZone(zones[dataregionindex])
-		localtime = [astimezone(ut, timezone) for ut in utc]
-		localoffset = [Dates.value.(lt.zone.offset)÷3600 for lt in localtime]
-		indexoffset = mod.((1:8760) + localoffset .- 1, 8760) .+ 1
-		demandutc = demandlocaltime[indexoffset]
-		demand[i,:] = reducehours(demandutc, 1, hourinfo) * 1000
-		# println("$reg ($i): ", sspdemand[i], " ", mean(demand[i,:])*8760/1000)	# check total regional demand
+	# read synthetic demand data (in UTC)
+	gisdemand = JLD.load(joinpath(inputdata, "SyntheticDemand_$(regionset)_$datayear.jld"), "demand")
+	for i = 1:numregions
+		demand[i,:] = reducehours(gisdemand[:,i], 1, hourinfo) / 1000		# GW
 	end
 
 	hydrovars = matread(joinpath(inputdata, "GISdata_hydro_$regionset.mat"))

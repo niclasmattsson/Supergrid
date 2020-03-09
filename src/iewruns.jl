@@ -6,7 +6,7 @@ function CAnucleartest()
 	# resultslist = Dict()
 	# capacity = Dict()
 	# energy = Dict()
-	@load "nuclearcosts2.jld2" resultslist capacity energy
+	JLD2.@load "nuclearcosts2.jld2" resultslist capacity energy
 	for nuccost in 8500:500:9000
 		options, hourinfo, sets, params = buildsetsparams(carboncap=0.0, hydroinvestmentsallowed=false)
 		println("\n\n\nNew run: nuclear cost=$nuccost.")
@@ -18,7 +18,7 @@ function CAnucleartest()
 		resultslist[nuccost] = sum(getvalue(model.vars.Systemcost)) / sum(params.demand) * 1000
 		capacity[nuccost] = sum(getvalue(model.vars.Capacity[r,:nuclear,:_]) for r in sets.REGION)
 		energy[nuccost] = sum(getvalue(model.vars.Electricity[r,:nuclear,:_,h]) for r in sets.REGION, h in sets.HOUR) / sum(params.demand) 
-		@save "nuclearcosts2.jld2" resultslist capacity energy
+		JLD2.@save "nuclearcosts2.jld2" resultslist capacity energy
 		println("\nReading results...")
 		results = readresults(model, status)
 		name = autorunname(model.options) * ", nuccost=$nuccost"
@@ -71,7 +71,7 @@ function supergridruns1(hourinterval)
 					println("\nSolve status: $status")
 					resultslist[nuc,solarwind,tm,cap] = sum(getvalue(model.vars.Systemcost))
 					allstatus[nuc,solarwind,tm,cap] = status
-					@save "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
+					JLD2.@save "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
 					println("\nReading results...")
 					results = readresults(model, status)
 					name = autorunname(model.options)
@@ -127,7 +127,7 @@ function supergridruns2(hourinterval)
 							println("\nSolve status: $status")
 							resultslist[solarwind,tm,cap,solar,battery] = sum(getvalue(model.vars.Systemcost))
 							allstatus[solarwind,tm,cap,solar,battery] = status
-							@save "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
+							JLD2.@save "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
 							println("\nReading results...")
 							results = readresults(model, status)
 							name = autorunname(model.options) * ", solarwind=$solarwind, solar=$solar, battery=$battery"
@@ -157,7 +157,7 @@ function supergridruns_biotest(hourinterval)
 				println("\nSolve status: $status")
 				results[bio,tm,cap] = sum(getvalue(model.vars.Systemcost))
 				allstatus[bio,tm,cap] = status
-				@save "$(path)supergridruns_biotest_$(hourinterval)h.jld2" results allstatus
+				JLD2.@save "$(path)supergridruns_biotest_$(hourinterval)h.jld2" results allstatus
 			end
 		end
 	end
@@ -234,24 +234,24 @@ function plot_gispaper_classes2(runsuffix="_nov14", carboncap=0.025, discountrat
 end
 
 function mergeresults()
-	# @load "iewcosts1_0.jld2" resultslist allstatus
+	# JLD2.@load "iewcosts1_0.jld2" resultslist allstatus
 	# res0, st0 = resultslist, allstatus
-	# @load "iewcosts1.jld2" resultslist allstatus
+	# JLD2.@load "iewcosts1.jld2" resultslist allstatus
 	# resultslist[false, 1, :none, 1.0] = res0[false, 1, :none, 1.0] 
 	# allstatus[false, 1, :none, 1.0] = st0[false, 1, :none, 1.0] 
-	# @save "iewcosts1.jld2" resultslist allstatus
-	@load "iewcosts2 - part1.jld2" resultslist allstatus
+	# JLD2.@save "iewcosts1.jld2" resultslist allstatus
+	JLD2.@load "iewcosts2 - part1.jld2" resultslist allstatus
 	res1, st1 = resultslist, allstatus
-	@load "iewcosts2 - part2.jld2" resultslist allstatus
+	JLD2.@load "iewcosts2 - part2.jld2" resultslist allstatus
 	res2, st2 = resultslist, allstatus
 	resultslist = merge(res1, res2)
 	allstatus = merge(st1, st2)
-	@save "iewcosts2.jld2" resultslist allstatus
+	JLD2.@save "iewcosts2.jld2" resultslist allstatus
 end
 
 function plot_lines_v2()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
-	@load "iewcosts1.jld2" resultslist allstatus
+	JLD2.@load "iewcosts1.jld2" resultslist allstatus
 	res = resultslist
 	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
 	res0 = get(res,(true,1,:all,1),0)
@@ -278,7 +278,7 @@ function plot_lines_v2()
 end
 
 function plot_lines_hydro()
-	@load "iewcosts1.jld2" resultslist allstatus
+	JLD2.@load "iewcosts1.jld2" resultslist allstatus
 	res = resultslist
 	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
 	res0 = get(res,(true,1,:all,1),0)
@@ -286,7 +286,7 @@ function plot_lines_hydro()
 		res0 = get(res,(false,1,:all,1),0)
 		res0 == 0 && error("No results for base case!")
 	end
-	@load "iewcosts1_hydro.jld2" resultslist allstatus
+	JLD2.@load "iewcosts1_hydro.jld2" resultslist allstatus
 	resh = resultslist
 	function getresults(res,a,b,c,d)
 		out = get(res,(a,b,c,d),NaN)
@@ -300,10 +300,10 @@ function plot_lines_hydro()
 					titlefont=20, guidefont=16, xlabel="Global CO2 constraint [g CO2/kWh]", ylabel="relative cost"))
 end
 
-# using JLD2, Plots; @load "iewruns1_1h.jld2" results allstatus; plotly()
+# using JLD2, Plots; JLD2.@load "iewruns1_1h.jld2" results allstatus; plotly()
 function plot_lines_v1()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
-	@load "iewruns1_1h.jld2" results allstatus
+	JLD2.@load "iewruns1_1h.jld2" results allstatus
 	res = results
 	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
 	res0 = res[true,:all,1]
@@ -318,7 +318,7 @@ end
 # Doesn't work because it refers to nuclear runs that were not performed, but this chart is not included in the paper.
 function plot_lines1_paper()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
-	@load "iewcosts1_new.jld2" resultslist allstatus
+	JLD2.@load "iewcosts1_new.jld2" resultslist allstatus
 	res = resultslist
 	# showall(keys(res))
 	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
@@ -342,7 +342,7 @@ function plot_supergridpaper_lines()
 	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
 	# r = loadresults("regionset=Eurasia21, nuclearallowed=false, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]", resultsfile=resultsfile); sum(r.params[:demand])
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) 
-	@load "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
+	JLD2.@load "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
 	res = resultslist
 	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
 	res0 = get(res,(true,1,:all,1),0)
@@ -383,7 +383,7 @@ function plot_supergridpaper_lines_transmission()
 	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
 	# r = loadresults("regionset=Eurasia21, nuclearallowed=false, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]", resultsfile=resultsfile); sum(r.params[:demand])
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) 
-	@load "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
+	JLD2.@load "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
 	res = resultslist
 	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
 	res0 = get(res,(true,1,:all,1),0)
@@ -413,7 +413,7 @@ end
 function plot_supergridpaper_bubbles()
 	path = "D:\\model runs\\"
 	runsuffix = "_nov14"
-	@load "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
+	JLD2.@load "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
 	res = resultslist
 	# showall(keys(res))
 	rows = [3 3 3 2 2 2 1 1 1]
@@ -529,7 +529,7 @@ function iew_getscenarioresults(scenarios, resultsnames, resultsfile)
 end
 
 function plot_bubbles_v1()
-	@load "iewruns2_1h.jld2" results allstatus
+	JLD2.@load "iewruns2_1h.jld2" results allstatus
 	res = results
 	rows = [3 3 3 2 2 2 1 1 1]
 	cols = [3 2 1 3 2 1 3 2 1]
@@ -544,7 +544,7 @@ function plot_bubbles_v1()
 end
 
 function plot_bubbles_v2()
-	@load "iewcosts2.jld2" resultslist allstatus
+	JLD2.@load "iewcosts2.jld2" resultslist allstatus
 	res = resultslist
 	rows = [3 3 3 2 2 2 1 1 1]
 	cols = [3 2 1 3 2 1 3 2 1]
@@ -567,7 +567,7 @@ end
 
 function plot_bubbles_v2_abs()
 	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
-	@load "iewcosts2.jld2" resultslist allstatus
+	JLD2.@load "iewcosts2.jld2" resultslist allstatus
 	res = resultslist
 	rows = [3 3 3 2 2 2 1 1 1]
 	cols = [3 2 1 3 2 1 3 2 1]
@@ -589,9 +589,9 @@ function plot_bubbles_v2_abs()
 end
 
 function plot_biolines_v1()
-	@load "iewruns1_1h.jld2" results allstatus
+	JLD2.@load "iewruns1_1h.jld2" results allstatus
 	res0 = results[true,:all,1]
-	@load "iewruns3_1h.jld2" results allstatus
+	JLD2.@load "iewruns3_1h.jld2" results allstatus
 	res = results
 	carboncaps = [5; 0]
 	allbio = [0, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3]
