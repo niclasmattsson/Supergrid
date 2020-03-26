@@ -65,9 +65,8 @@ function listresults(; resultsfile="results.jld2", group="")
 		group *= "/"
 	end
 	JLD2.jldopen(resultsfile, "r") do file
-		display(file)
+		return keys(file)
 	end
-	return nothing
 end
 
 function loadresults(; resultsfile="results.jld2", group="", loadoptions...)

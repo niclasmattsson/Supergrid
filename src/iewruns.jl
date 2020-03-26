@@ -28,55 +28,102 @@ function CAnucleartest()
 	resultslist, capacity
 end
 
-function FHnuclearextraruns()
-	for nuc in [true, false]
-		for tm in [:islands, :all]
-			println("\n\n\nNew run: nuclear=$nuc, transmission=$tm")
-			runmodel(regionset=:eurasia21, carboncap=0, nuclearallowed=nuc, hydroinvestmentsallowed=false, transmissionallowed=tm,
-						resultsfile="FHnuclearextraruns.jld2");  # globalnuclearlimit=200,
-		end
+function newrun1!(nuc, solarwind, tm, cap, resultslist, allstatus, path, runsuffix, disabletechs)
+	println("\n\n\nNew run: transmission=$tm, cap=$cap, solarwind=$solarwind, nuclear=$nuc.")
+	model = buildmodel(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05, 
+						carboncap=cap, nuclearallowed=nuc, transmissionallowed=tm, solarwindarea=solarwind, disabletechs=disabletechs)
+	println("\nSolving model...")
+	status = solve(model.modelname)
+	println("\nSolve status: $status")
+	resultslist[nuc,solarwind,tm,cap] = sum(getvalue(model.vars.Systemcost))
+	allstatus[nuc,solarwind,tm,cap] = status
+	JLD2.@save "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
+	println("\nReading results...")
+	results = readresults(model, status)
+	name = autorunname(model.options)
+	println("\nSaving results to disk...")
+	saveresults(results, name, resultsfile="$(path)supergridruns1$runsuffix.jld2")
+end
+
+function build_costs_from_runs(runsname, outname)
+	path = "D:\\model runs\\"
+	runs = listresults(resultsfile="$path$runsname")
+	resultslist = Dict()
+	allstatus = Dict()
+	for (i, runname) in enumerate(runs)
+		println("$i/$(length(runs)): $runname")
+		r = loadresults(runname, resultsfile="$path$runsname")
+		resultslist[runname] = sum(r.Systemcost)
+		allstatus[runname] = r.Status
 	end
+	JLD2.@save "$path$outname" resultslist allstatus
 end
 
-function plot_FHnuclearextraruns_energymix()
-	scen = ["Islands - no nuclear", "Supergrid - no nuclear", "Islands - 200GW nuclear", "Supergrid - 200GW nuclear", "Islands - unlimited nuclear", "Supergrid - unlimited nuclear"]
-	resultsnames = ["regionset=eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=eurasia21, nuclearallowed=false, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=eurasia21, transmissionallowed=islands, globalnuclearlimit=200, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=eurasia21, globalnuclearlimit=200, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=eurasia21, transmissionallowed=islands, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=eurasia21, carboncap=0, resultsfile=FHnuclearextraruns.jld2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]"]
-	resultsfile = "FHnuclearextraruns.jld2"
-	plot_energymix(scen, resultsnames, resultsfile)
-	# plot_energymix(scen[1,2,5,6], resultsnames[1,2,5,6], resultsfile)
+function newrun!(namesuffix, options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
+	name = (namesuffix == "") ? autorunname(options) : autorunname(options) * ", " * namesuffix
+	println("\n\n\nNew run: $name.")
+	model = buildvarsmodel(options, hourinfo, sets, params)
+	println("\nSolving model...")
+	status = solve(model.modelname)
+	println("\nSolve status: $status")
+	resultslist[name] = sum(getvalue(model.vars.Systemcost))
+	allstatus[name] = status
+	JLD2.@save "$(path)supergridcosts3$runsuffix.jld2" resultslist allstatus
+	println("\nReading results...")
+	results = readresults(model, status)
+	println("\nSaving results to disk...")
+	saveresults(results, name, resultsfile="$(path)supergridruns3$runsuffix.jld2")
 end
 
-function supergridruns1(hourinterval)
+function supergridruns1()
 	resultslist = Dict()
 	allstatus = Dict()
 	path = "D:\\model runs\\"
-	runsuffix = "_nov14"
-	runcount = 0
-	for nuc in [false]
-		for solarwind in [1, 2]
-			for tm in [:none, :islands, :all]
-				for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0]
-					# runcount += 1
-					# runcount in [1] && continue
-					println("\n\n\nNew run: nuclear=$nuc, solarwind=$solarwind, transmission=$tm, cap=$cap.")
-					model = buildmodel(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21], hours=hourinterval, maxbioenergy=0.05, 
-										carboncap=cap, nuclearallowed=nuc, transmissionallowed=tm, solarwindarea=solarwind)
-					println("\nSolving model...")
-					status = solve(model.modelname)
-					println("\nSolve status: $status")
-					resultslist[nuc,solarwind,tm,cap] = sum(getvalue(model.vars.Systemcost))
-					allstatus[nuc,solarwind,tm,cap] = status
-					JLD2.@save "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
-					println("\nReading results...")
-					results = readresults(model, status)
-					name = autorunname(model.options)
-					println("\nSaving results to disk...")
-					saveresults(results, name, resultsfile="$(path)supergridruns1$runsuffix.jld2")
+	runsuffix = "_mar10"
+	for tm in [:none, :islands, :all]
+		for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0]
+			for solarwind in [1, 2], nuc in [false]
+				newrun1!(nuc, solarwind, tm, cap, resultslist, allstatus, path, runsuffix, [:csp])
+			end
+			for solarwind in [1], nuc in [true]
+				newrun1!(nuc, solarwind, tm, cap, resultslist, allstatus, path, runsuffix, [:csp])
+			end
+			for solarwind in [1, 2], nuc in [false]
+				newrun1!(nuc, solarwind, tm, cap, resultslist, allstatus, path, runsuffix, [])
+			end
+		end
+	end
+	resultslist, allstatus
+end
+
+function supergridruns2()
+	resultslist = Dict()
+	allstatus = Dict()
+	path = "D:\\model runs\\"
+	runsuffix = "_mar10"
+	for tm in [:none, :islands, :all]
+		for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0]
+			for solarwind in [1, 2], nuc in [false]
+				options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05,
+						carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc, transmissionallowed=tm, disabletechs=[:csp])
+				params.transmissioninvestcost .*= 0.5
+				params.transmissionfixedcost .*= 0.5
+				newrun!("half_transmission_cost", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
+
+				options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05,
+						carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc, transmissionallowed=tm, disabletechs=[])
+				newrun!("", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
+			end
+		end
+	end
+	for tm in [:islands, :all]
+		for cap in [0.001]
+			for solarwind in [1, 2], nuc in [false]
+				for solar in [:high, :mid, :low], battery in [:high, :mid, :low]
+					options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05,
+							carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc, transmissionallowed=tm, disabletechs=[:csp])
+					solarbatterycosts!(sets, params, solar, battery)
+					newrun!("solar=$solar, battery=$battery", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
 				end
 			end
 		end
@@ -84,84 +131,30 @@ function supergridruns1(hourinterval)
 	resultslist, allstatus
 end
 
-function supergridruns2(hourinterval)
-	resultslist = Dict()
-	allstatus = Dict()
-	path = "D:\\model runs\\"
-	runsuffix = "_nov14"
-	for nuc in [false]
-		for solarwind in [1, 2]
-			for tm in [:islands, :all]
-				for cap in [0.001]
-					options, hourinfo, sets, params = buildsetsparams(hours=hourinterval, carboncap=cap, maxbioenergy=0.05,
-											regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21], 
-											solarwindarea=solarwind, nuclearallowed=nuc, transmissionallowed=tm)
-					pvcost = params.investcost[:pv,:a1]
-					pvroofcost = params.investcost[:pvroof,:a1]
-					batterycost = params.investcost[:battery,:_]
-					for solar in [:high, :mid, :low]
-						for battery in [:high, :mid, :low]
-							println("\n\n\nNew run: nuclear=$nuc, solarwind=$solarwind, transmission=$tm, cap=$cap, solar=$solar, battery=$battery.")
-							for c in sets.CLASS[:pv]
-								if solar == :high
-									params.investcost[:pv,c] = pvcost + 300
-									params.investcost[:pvroof,c] = pvroofcost + 300
-								elseif solar == :mid
-									params.investcost[:pv,c] = pvcost
-									params.investcost[:pvroof,c] = pvroofcost
-								elseif solar == :low
-									params.investcost[:pv,c] = pvcost - 300
-									params.investcost[:pvroof,c] = pvroofcost - 300
-								end
-							end
-							if battery == :high
-								params.investcost[:battery,:_] = batterycost * 1.5
-							elseif battery == :mid
-								params.investcost[:battery,:_] = batterycost
-							elseif battery == :low
-								params.investcost[:battery,:_] = batterycost * 0.5
-							end
-							model = buildvarsmodel(options, hourinfo, sets, params)
-							println("\nSolving model...")
-							status = solve(model.modelname)
-							println("\nSolve status: $status")
-							resultslist[solarwind,tm,cap,solar,battery] = sum(getvalue(model.vars.Systemcost))
-							allstatus[solarwind,tm,cap,solar,battery] = status
-							JLD2.@save "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
-							println("\nReading results...")
-							results = readresults(model, status)
-							name = autorunname(model.options) * ", solarwind=$solarwind, solar=$solar, battery=$battery"
-							println("\nSaving results to disk...")
-							saveresults(results, name, resultsfile="$(path)supergridruns2$runsuffix.jld2")
-						end
-					end
-				end
-			end
+function solarbatterycosts!(sets, params, solar, battery)
+	pvcost = params.investcost[:pv,:a1]
+	pvroofcost = params.investcost[:pvroof,:a1]
+	batterycost = params.investcost[:battery,:_]
+	for c in sets.CLASS[:pv]
+		if solar == :high
+			params.investcost[:pv,c] = pvcost + 300
+			params.investcost[:pvroof,c] = pvroofcost + 300
+		elseif solar == :mid
+			params.investcost[:pv,c] = pvcost
+			params.investcost[:pvroof,c] = pvroofcost
+		elseif solar == :low
+			params.investcost[:pv,c] = pvcost - 300
+			params.investcost[:pvroof,c] = pvroofcost - 300
 		end
 	end
-	resultslist, allstatus
-end
-
-function supergridruns_biotest(hourinterval)
-	results = Dict()
-	allstatus = Dict()
-	path = "D:\\model runs\\"
-	for bio in [0, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3]
-		for tm in [:islands, :all]
-			for cap in [0.005, 0]
-				println("\n\n\nNew run: bio=$bio, transmission=$tm, cap=$cap.")
-				model = buildmodel(hours=hourinterval, carboncap=cap, maxbioenergy=bio, 
-									nuclearallowed=false, transmissionallowed=tm)
-				println("\nSolving model...")
-				status = solve(model.modelname)
-				println("\nSolve status: $status")
-				results[bio,tm,cap] = sum(getvalue(model.vars.Systemcost))
-				allstatus[bio,tm,cap] = status
-				JLD2.@save "$(path)supergridruns_biotest_$(hourinterval)h.jld2" results allstatus
-			end
-		end
+	if battery == :high
+		params.investcost[:battery,:_] = batterycost * 1.5
+	elseif battery == :mid
+		params.investcost[:battery,:_] = batterycost
+	elseif battery == :low
+		params.investcost[:battery,:_] = batterycost * 0.5
 	end
-	results, allstatus
+	nothing
 end
 
 function gispaperruns(runsuffix="_nov14", discountrate=0.07)
@@ -249,177 +242,91 @@ function mergeresults()
 	JLD2.@save "iewcosts2.jld2" resultslist allstatus
 end
 
-function plot_lines_v2()
-	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
-	JLD2.@load "iewcosts1.jld2" resultslist allstatus
-	res = resultslist
-	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
-	res0 = get(res,(true,1,:all,1),0)
-	if res0 == 0
-		res0 = get(res,(false,1,:all,1),0)
-		res0 == 0 && error("No results for base case!")
-	end
-	function getresults(a,b,c,d)
-		cost = get(res,(a,b,c,d),NaN)						# M€/year
-		return cost > 1e7 ? NaN : cost/totaldemand*1000		# €/MWh
-	end
-	resmat1 = [getresults(true,1,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
-	resmat2 = [getresults(false,1,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
-	resmat3 = [getresults(true,4,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
-	resmat4 = [getresults(false,4,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
-	p1 = plot(string.(carboncaps), resmat1, title="nuclear, default solar & wind area")
-	p2 = plot(string.(carboncaps), resmat2, title="no nuclear, default solar & wind area")
-	p3 = plot(string.(carboncaps), resmat3, title="nuclear, high solar & wind area")
-	p4 = plot(string.(carboncaps), resmat4, title="no nuclear, high solar & wind area")
-	display(plot(p2, p4, layout=2, size=(1850,950), ylim=(0,120), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
-					titlefont=20, guidefont=16, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]"))
-	# display(plot(p3, p4, layout=2, size=(1850,950), ylim=(0.9,2.5), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
-	# 				titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
-end
-
-function plot_lines_hydro()
-	JLD2.@load "iewcosts1.jld2" resultslist allstatus
-	res = resultslist
-	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
-	res0 = get(res,(true,1,:all,1),0)
-	if res0 == 0
-		res0 = get(res,(false,1,:all,1),0)
-		res0 == 0 && error("No results for base case!")
-	end
-	JLD2.@load "iewcosts1_hydro.jld2" resultslist allstatus
-	resh = resultslist
-	function getresults(res,a,b,c,d)
-		out = get(res,(a,b,c,d),NaN)
-		return out > 1e7 ? NaN : out/res0
-	end
-	resmat1 = [getresults(res,false,1,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
-	resmat2 = [getresults(resh,false,1,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
-	p1 = plot(string.(carboncaps), resmat1, title="no nuclear, existing hydro")
-	p2 = plot(string.(carboncaps), resmat2, title="no nuclear, existing hydro + investments")
-	display(plot(p1, p2, layout=2, size=(1850,950), ylim=(0.9,2.5), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
-					titlefont=20, guidefont=16, xlabel="Global CO2 constraint [g CO2/kWh]", ylabel="relative cost"))
-end
-
-# using JLD2, Plots; JLD2.@load "iewruns1_1h.jld2" results allstatus; plotly()
-function plot_lines_v1()
-	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
-	JLD2.@load "iewruns1_1h.jld2" results allstatus
-	res = results
-	carboncaps = [1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
-	res0 = res[true,:all,1]
-	resmat1 = [res[true,tm,cap/1000]/totaldemand*1000 for cap in carboncaps, tm in [:none, :islands, :all]]
-	resmat2 = [res[false,tm,cap/1000]/totaldemand*1000 for cap in carboncaps, tm in [:none, :islands, :all]]
-	p1 = plot(string.(carboncaps), resmat1, title="nuclear")
-	p2 = plot(string.(carboncaps), resmat2, title="no nuclear")
-	display(plot(p1, p2, layout=2, size=(1850,950), ylim=(0,120), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
-					titlefont=20, guidefont=16, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]"))
-end
-
-# Doesn't work because it refers to nuclear runs that were not performed, but this chart is not included in the paper.
-function plot_lines1_paper()
-	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
-	JLD2.@load "iewcosts1_new.jld2" resultslist allstatus
-	res = resultslist
-	# showall(keys(res))
-	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
-	res0 = res[true,:all,1]
-	resmat1 = [res[true,tm,cap/1000]/totaldemand*1000 for cap in carboncaps, tm in [:islands, :all]]
-	resmat2 = [res[false,tm,cap/1000]/totaldemand*1000 for cap in carboncaps, tm in [:islands, :all]]
-	carboncaps[1] = "none"
-	display([resmat2 resmat1])
-	p = plot(string.(carboncaps), [resmat2 resmat1], color=[1 2 1 2], line=[:solid :solid :dash :dash])
-	display(plot(p, size=(1000,450), ylim=(0,70), 
-					label=["Is-lowL - no nuclear" "Sup-lowL - no nuclear" "Is-lowL - unlimited nuclear" "Sup-lowL - unlimited nuclear"],
-					line=3, tickfont=14, legendfont=14,
-					titlefont=16, guidefont=14, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]",
-					left_margin=50px, gridlinewidth=1))
-end
-
 # Figure 2 in the supergrid paper (fig 1 is the eurasia map).
 function plot_supergridpaper_lines()
 	path = "D:\\model runs\\"
-	runsuffix = "_nov14"
+	runsuffix = "_mar10"
 	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
-	# r = loadresults("regionset=Eurasia21, nuclearallowed=false, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]", resultsfile=resultsfile); sum(r.params[:demand])
-	totaldemand = 1.8695380613113698e7	# (GWh/yr) 
+	r = loadresults(runname(1, :all, 1.0, false, false, false), resultsfile=resultsfile)
+	totaldemand = sum(r.params[:demand])	# 1.975066479481802e7	# (GWh/yr) 
 	JLD2.@load "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
 	res = resultslist
 	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
-	res0 = get(res,(true,1,:all,1),0)
-	if res0 == 0
-		res0 = get(res,(false,1,:all,1),0)
-		res0 == 0 && error("No results for base case!")
-	end
-	function getresults(a,b,c,d)
-		cost = get(res,(a,b,c,d),NaN)						# M€/year
+
+	function getresults(a,b,c,d,e,f)
+		cost = get(res, runname(a,b,c,d,e,f), NaN)				# M€/year
 		return cost > 1e7 ? NaN : cost/totaldemand*1000		# €/MWh
 	end
-	# resmat1 = [getresults(true,1,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
-	resmat2 = [getresults(false,1,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
-	# resmat3 = [getresults(true,2,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
-	resmat4 = [getresults(false,2,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
+
+	resmat2 = [getresults(1, tm, cap/1000, false, false, false) for cap in carboncaps, tm in [:islands, :all]]
+	resmat4 = [getresults(2, tm, cap/1000, false, false, false) for cap in carboncaps, tm in [:islands, :all]]
 	carboncaps[1] = "none"
 
 	p = plot(string.(carboncaps), [resmat2 resmat4], color=[1 2 1 2], line=[:solid :solid :dash :dash])
 	display(plot(p, size=(850,450), ylim=(0,60), 
 					label=["C" "S" "C-Hland" "S-Hland"],
 					line=3, tickfont=14, legendfont=14,
-					titlefont=16, guidefont=14, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]",
+					titlefont=16, guidefont=14, xlabel="Global CO<sub>2</sub> cap [g CO<sub>2</sub>/kWh]", ylabel="Average system cost [€/MWh]",
 					left_margin=50px, gridlinewidth=1))
-	# p1 = plot(string.(carboncaps), resmat1, title="Unlimited nuclear, default solar & wind area")
 	p2 = plot(string.(carboncaps), resmat2, title="Low solar & wind area", label=["" ""])
-	# p3 = plot(string.(carboncaps), resmat3, title="Unlimited nuclear, high solar & wind area")
 	p4 = plot(string.(carboncaps), resmat4, title="High solar & wind area", label=[:islands :all])
 	display(plot(p2, p4, layout=2, size=(1000,450), ylim=(0,60), line=3, tickfont=14, legendfont=14,
-					titlefont=16, guidefont=14, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]",
+					titlefont=16, guidefont=14, xlabel="Global CO<sub>2</sub> cap [g CO<sub>2</sub>/kWh]", ylabel="Average system cost [€/MWh]",
 					left_margin=50px, gridlinewidth=1))
-	# display(plot(p3, p4, layout=2, size=(1000,450), ylim=(0.9,2.5), label=[:none :islands :all], line=3, tickfont=16, legendfont=16,
-	# 				titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
 end
 
-function plot_supergridpaper_lines_transmission()
+function plot_supergridpaper_lines_transmission(allowcsp=false, allownuclear=false, halftmcost=false)
 	path = "D:\\model runs\\"
-	runsuffix = "_nov14"
-	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
-	# r = loadresults("regionset=Eurasia21, nuclearallowed=false, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]", resultsfile=resultsfile); sum(r.params[:demand])
-	totaldemand = 1.8695380613113698e7	# (GWh/yr) 
-	JLD2.@load "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
+	runsuffix = "_mar10"
+	csprunnumber = (allowcsp || halftmcost) ? 2 : 1
+	resultsfile = "$(path)supergridruns$csprunnumber$runsuffix.jld2"
+	r = loadresults(runname(1, :all, 1.0, allowcsp, allownuclear, halftmcost), resultsfile=resultsfile)
+	totaldemand = sum(r.params[:demand])	# 1.975066479481802e7	# (GWh/yr) 
+	JLD2.@load "$(path)supergridcosts$csprunnumber$runsuffix.jld2" resultslist allstatus
 	res = resultslist
-	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
-	res0 = get(res,(true,1,:all,1),0)
-	if res0 == 0
-		res0 = get(res,(false,1,:all,1),0)
-		res0 == 0 && error("No results for base case!")
-	end
-	function getresults(a,b,c,d)
-		cost = get(res,(a,b,c,d),NaN)						# M€/year
+	# JLD2.@load "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
+	# res = merge(res, resultslist)
+	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]
+	titletext = "CSP " * (allowcsp ? "" : "not ") * "allowed" * (halftmcost ? ", half transmission cost" : "") * (allownuclear ? ", nuclear allowed" : "")
+
+	function getresults(a,b,c,d,e,f)
+		cost = get(res, runname(a,b,c,d,e,f), NaN)				# M€/year
 		return cost > 1e7 ? NaN : cost/totaldemand*1000		# €/MWh
 	end
-	# resmat1 = [getresults(true,1,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
-	resmat2 = [getresults(false,1,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
-	# resmat3 = [getresults(true,2,tm,cap/1000) for cap in carboncaps, tm in [:islands, :all]]
-	resmat4 = [getresults(false,2,tm,cap/1000) for cap in carboncaps, tm in [:none, :islands, :all]]
+
+	resmat1 = [getresults(1, tm, cap/1000, allowcsp, allownuclear, halftmcost) for cap in carboncaps, tm in [:none, :islands, :all]]
+	resmat2 = [getresults(2, tm, cap/1000, allowcsp, allownuclear, halftmcost) for cap in carboncaps, tm in [:none, :islands, :all]]
 	carboncaps[1] = "none"
 
-	p = plot(string.(carboncaps), [resmat2 resmat4], color=[3 1 2 3 1 2], line=[:solid :solid :solid :dash :dash :dash])
+	p = plot(string.(carboncaps), [resmat1 resmat2], color=[3 1 2 3 1 2], line=[:solid :solid :solid :dash :dash :dash])
 	display(plot(p, size=(850,450), ylim=(0,60), 
-					label=["R" "C" "S" "R-Hland" "C-Hland" "S-Hland"],
+					label=["R           " "C" "S" "R-Hland" "C-Hland" "S-Hland"],
 					line=3, tickfont=14, legendfont=14,
-					titlefont=16, guidefont=14, xlabel="Global CO2 cap [g CO2/kWh]", ylabel="Average system cost [€/MWh]",
-					left_margin=50px, gridlinewidth=1))
+					titlefont=16, guidefont=14, xlabel="Global CO<sub>2</sub> cap [g CO<sub>2</sub>/kWh]", ylabel="Average system cost [€/MWh]",
+					left_margin=50px, gridlinewidth=1, title=titletext))
 end
+
+runname(land::Int, tm::Symbol, cap::Float64, allowcsp::Bool, allownuclear::Bool, halftmcost::Bool) =
+	"regionset=Eurasia21, " * (tm == :all ? "" : "transmissionallowed=$tm, ") *
+	(allownuclear ? "" : "nuclearallowed=false, ") * (cap == 1.0 ? "" : "carboncap=$cap, ") * (land == 1 ? "" : "solarwindarea=2, ") *
+	(allowcsp ? "" : "disabletechs=Symbol[:csp], ") * "islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]" * (halftmcost ? ", half_transmission_cost" : "")
+
+runname(land::Int, tm::Symbol, solar::Symbol, battery::Symbol) =
+	"regionset=Eurasia21, " * (tm == :all ? "" : "transmissionallowed=$tm, ") *
+	"nuclearallowed=false, carboncap=0.001, " * (land == 1 ? "" : "solarwindarea=2, ") *
+	"disabletechs=Symbol[:csp], islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21], solar=$solar, battery=$battery"
 
 # Figure 4 in the supergrid paper.
 function plot_supergridpaper_bubbles()
 	path = "D:\\model runs\\"
-	runsuffix = "_nov14"
-	JLD2.@load "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
+	runsuffix = "_mar10"
+	JLD2.@load "$(path)supergridcosts3$runsuffix.jld2" resultslist allstatus
 	res = resultslist
 	# showall(keys(res))
 	rows = [3 3 3 2 2 2 1 1 1]
 	cols = [3 2 1 3 2 1 3 2 1]
-	r1 = [res[1,:islands,0.001,solar,battery]/res[1,:all,0.001,solar,battery]-1 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-	r2 = [res[2,:islands,0.001,solar,battery]/res[2,:all,0.001,solar,battery]-1 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
+	r1 = [res[runname(1,:islands,solar,battery)]/res[runname(1,:all,solar,battery)]-1 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
+	r2 = [res[runname(2,:islands,solar,battery)]/res[runname(2,:all,solar,battery)]-1 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
 	bs = 0.4	# bubble size
 	annotations1 = [(rows[i]-0.65*bs*sqrt(r1[i]*100/pi), cols[i], text("$(round(r1[i]*100, digits=1))%", :right)) for i=1:9]
 	annotations2 = [(rows[i]-0.65*bs*sqrt(r2[i]*100/pi), cols[i], text("$(round(r2[i]*100, digits=1))%", :right)) for i=1:9]
@@ -438,43 +345,26 @@ function plot_supergridpaper_bubbles()
 end
 
 # Figure 3 in the supergrid paper.
-function plot_supergridpaper_energymix()
+function plot_supergridpaper_energymix(cap=0.001, allowcsp=false, allownuclear=false, halftmcost=false)
 	path = "D:\\model runs\\"
-	runsuffix = "_nov14"
-	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
-	scen = ["C", "S", "C_Hland", "S_Hland"]
-	resultsnames = ["regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=Eurasia21, nuclearallowed=false, carboncap=0.001, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=Eurasia21, nuclearallowed=false, carboncap=0.001, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]"]
-	plot_energymix(scen, resultsnames, resultsfile)  #, deletetechs=[1,2,6,7,12])
-end
-
-function plot_supergridpaper_energymix_transmission()
-	path = "D:\\model runs\\"
-	runsuffix = "_nov14"
-	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
-	scen = ["R", "C", "S", "R-Hland", "C-Hland", "S-Hland"]
-	resultsnames = ["regionset=Eurasia21, transmissionallowed=none, nuclearallowed=false, carboncap=0.1, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.1, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=Eurasia21, nuclearallowed=false, carboncap=0.1, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=Eurasia21, transmissionallowed=none, nuclearallowed=false, carboncap=0.1, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.1, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=Eurasia21, nuclearallowed=false, carboncap=0.1, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]"]
-	plot_energymix(scen, resultsnames, resultsfile; size=(750,550))  #, deletetechs=[1,2,6,7,12])
-end
-
-function plot_supergridpaper_energymix_transmission2()
-	path = "D:\\model runs\\"
-	runsuffix = "_nov14"
-	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
-	scen = ["C", "S", "R-Hland", "C-Hland", "S-Hland"]
-	resultsnames = ["regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.05, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=Eurasia21, nuclearallowed=false, carboncap=0.05, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=Eurasia21, transmissionallowed=none, nuclearallowed=false, carboncap=0.05, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.05, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]",
-					"regionset=Eurasia21, nuclearallowed=false, carboncap=0.05, solarwindarea=2, islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]"]
-	plot_energymix(scen, resultsnames, resultsfile; size=(750,550))  #, deletetechs=[1,2,6,7,12])
+	runsuffix = "_mar10"
+	csprunnumber = (allowcsp || halftmcost) ? 2 : 1
+	resultsfile = "$(path)supergridruns$csprunnumber$runsuffix.jld2"
+	indices = (cap >= 0.1 || allownuclear) ? collect(1:6) : [2,3,5,6]
+	if allownuclear
+		indices = indices[indices .<= 3]
+	end
+	scen = ["R", "C", "S", "R-Hland", "C-Hland", "S-Hland"][indices]
+	resultsnames = [runname(1, :none, cap, allowcsp, allownuclear, halftmcost),
+					runname(1, :islands, cap, allowcsp, allownuclear, halftmcost),
+					runname(1, :all, cap, allowcsp, allownuclear, halftmcost),
+					runname(2, :none, cap, allowcsp, allownuclear, halftmcost),
+					runname(2, :islands, cap, allowcsp, allownuclear, halftmcost),
+					runname(2, :all, cap, allowcsp, allownuclear, halftmcost)][indices]
+	cap1000 = round(Int, 1000*cap)
+	titletext = "CSP " * (allowcsp ? "" : "not ") * "allowed" * (halftmcost ? ", half transmission cost" : "") *
+					(allownuclear ? ", nuclear allowed" : "") * ", $cap1000 g CO<sub>2</sub>/kWh"
+	plot_energymix(scen, resultsnames, resultsfile; size=(200+100*length(indices), 550), title=titletext)  #, deletetechs=[1,2,6,7,12])
 end
 
 function plot_energymix(scen, resultsnames, resultsfile; deletetechs=[], optionlist...)
@@ -527,127 +417,3 @@ function iew_getscenarioresults(scenarios, resultsnames, resultsfile)
 	end
 	return scenelec, demands, hoursperperiod, displayorder, techlabels
 end
-
-function plot_bubbles_v1()
-	JLD2.@load "iewruns2_1h.jld2" results allstatus
-	res = results
-	rows = [3 3 3 2 2 2 1 1 1]
-	cols = [3 2 1 3 2 1 3 2 1]
-	r = [(res[false,:islands,0.005,solar,battery]-res[false,:all,0.005,solar,battery])/res[false,:all,0.005,solar,battery] for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-	annotations = [(rows[i]-0.17*r[i]/0.06, cols[i], text("$(round(r[i]*100, digits=1))%", :right)) for i=1:9]
-	s = scatter(rows, cols, markersize=reshape(r*500, (1,9)), annotations=annotations, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
-					title="System cost diff: islands - all (no nuclear)", xlabel="battery cost", ylabel="solar PV cost",
-					tickfont=12, guidefont=12)
-	xticks!([1,2,3],["low","mid","high"])
-	yticks!([1,2,3],["low","mid","high"])
-	display(s)
-end
-
-function plot_bubbles_v2()
-	JLD2.@load "iewcosts2.jld2" resultslist allstatus
-	res = resultslist
-	rows = [3 3 3 2 2 2 1 1 1]
-	cols = [3 2 1 3 2 1 3 2 1]
-	r1 = [(res[1,:islands,0.001,solar,battery]-res[1,:all,0.001,solar,battery])/res[1,:all,0.001,solar,battery] for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-	r2 = [(res[4,:islands,0.001,solar,battery]-res[4,:all,0.001,solar,battery])/res[4,:all,0.001,solar,battery] for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-	annotations1 = [(rows[i]-0.17*r1[i]/0.06, cols[i], text("$(round(r1[i]*100, digits=1))%", :right)) for i=1:9]
-	annotations2 = [(rows[i]-0.17*r2[i]/0.06, cols[i], text("$(round(r2[i]*100, digits=1))%", :right)) for i=1:9]
-	s1 = scatter(rows, cols, markersize=reshape(r1*500, (1,9)), annotations=annotations1, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
-					title="System cost diff: islands - all (default solar/wind area)", xlabel="battery cost", ylabel="solar PV cost",
-					tickfont=12, guidefont=12)
-	xticks!([1,2,3],["low","mid","high"])
-	yticks!([1,2,3],["low","mid","high"])
-	s2 = scatter(rows, cols, markersize=reshape(r2*500, (1,9)), annotations=annotations2, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
-					title="System cost diff: islands - all (high solar/wind area)", xlabel="battery cost", ylabel="solar PV cost",
-					tickfont=12, guidefont=12)
-	xticks!([1,2,3],["low","mid","high"])
-	yticks!([1,2,3],["low","mid","high"])
-	display(plot(s1, s2, layout=2, size=(1350,650)))
-end
-
-function plot_bubbles_v2_abs()
-	totaldemand = 1.8695380613113698e7	# (GWh/yr) r = loadresults("nuclearallowed=false", resultsfile="iewruns1.jld2");  sum(r.params[:demand])
-	JLD2.@load "iewcosts2.jld2" resultslist allstatus
-	res = resultslist
-	rows = [3 3 3 2 2 2 1 1 1]
-	cols = [3 2 1 3 2 1 3 2 1]
-	r1 = [(res[1,:islands,0.001,solar,battery]-res[1,:all,0.001,solar,battery])/totaldemand*1000 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-	r2 = [(res[4,:islands,0.001,solar,battery]-res[4,:all,0.001,solar,battery])/totaldemand*1000 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-	annotations1 = [(rows[i]-0.06*r1[i], cols[i], text("$(round(r1[i], digits=1))", :right)) for i=1:9]
-	annotations2 = [(rows[i]-0.06*r2[i], cols[i], text("$(round(r2[i], digits=1))", :right)) for i=1:9]
-	s1 = scatter(rows, cols, markersize=reshape(r1*10, (1,9)), annotations=annotations1, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
-					title="System cost diff [€/MWh]: islands - all (default solar/wind area)", xlabel="battery cost", ylabel="solar PV cost",
-					tickfont=12, guidefont=12)
-	xticks!([1,2,3],["low","mid","high"])
-	yticks!([1,2,3],["low","mid","high"])
-	s2 = scatter(rows, cols, markersize=reshape(r2*10, (1,9)), annotations=annotations2, xlim=(0.5,3.5), ylim=(0.5,3.5), legend=false,
-					title="System cost diff [€/MWh]: islands - all (high solar/wind area)", xlabel="battery cost", ylabel="solar PV cost",
-					tickfont=12, guidefont=12)
-	xticks!([1,2,3],["low","mid","high"])
-	yticks!([1,2,3],["low","mid","high"])
-	display(plot(s1, s2, layout=2, size=(1350,650)))
-end
-
-function plot_biolines_v1()
-	JLD2.@load "iewruns1_1h.jld2" results allstatus
-	res0 = results[true,:all,1]
-	JLD2.@load "iewruns3_1h.jld2" results allstatus
-	res = results
-	carboncaps = [5; 0]
-	allbio = [0, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3]
-	res_islands = [res[bio,:islands,cap/1000]/res0 for cap in carboncaps, bio in allbio]
-	res_all = [res[bio,:all,cap/1000]/res0 for cap in carboncaps, bio in allbio]
-	# p1 = plot(string.(carboncaps), res_islands, title="islands")
-	# p2 = plot(string.(carboncaps), res_all, title="all")
-	# display(plot(p1, p2, layout=2, size=(1850,950), ylim=(0.9,2.5), label=biolabels, line=3, tickfont=16, legendfont=16,
-	# 				titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost"))
-	biolabels_islands = ["bio=$b, islands" for i in 1:1, b in allbio]
-	biolabels_all = ["bio=$b, all" for i in 1:1, b in allbio]
-	p = plot(string.(carboncaps), res_islands, size=(650,950), ylim=(0.9,2.5), label=biolabels_islands, line=(3,:dash), tickfont=16, legendfont=16,
-					color=reshape(1:8,(1,8)), titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost")
-	plot!(string.(carboncaps), res_all, color=reshape(1:8,(1,8)), label=biolabels_all, line=3)
-	display(p)
-end
-
-# function plotiew1_v2(res)
-# 	carboncaps = [1; 0.2; 0.1; 0.05; 0.02; 0.01; 0.005; 0.002; 0.001; 0]	
-# 	res0 = res[true,:all,1]
-# 	resmat1 = [res[true,tm,cap]/res0 for cap in carboncaps, tm in [:none, :islands, :all]]
-# 	resmat2 = [res[false,tm,cap]/res0 for cap in carboncaps, tm in [:none, :islands, :all]]
-# 	plot(string.(carboncaps), [resmat2 resmat1], size=(1850,950), label=[:none_nonuke :islands_nonuke :all_nonuke :none :islands :all],
-# 		line=3, tickfont=16, legendfont=16, titlefont=20, guidefont=16, xlabel="g CO2/kWh", ylabel="relative cost")
-# end
-
-# function plotiew2_old(res)
-# 	row = [1 1 1; 2 2 2; 3 3 3]
-# 	col = [1 2 3; 1 2 3; 1 2 3]
-# 	# row = [solar for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-# 	# col = [battery for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-# 	resmat1 = [(res[true,:islands,0.005,solar,battery]-res[true,:all,0.005,solar,battery])/res[true,:all,0.005,:low,:low] for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-# 	resmat2 = [(res[false,:islands,0.005,solar,battery]-res[false,:all,0.005,solar,battery])/res[true,:all,0.005,:low,:low] for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-# 	display(resmat1)
-# 	println()
-# 	display(resmat2)
-# 	display(scatter(row, col, markersize=resmat1*100, title="nuclear"))
-# 	display(scatter(row, col, markersize=resmat2*100, title="no nuclear"))
-# end
-
-
-
-#=
-for nuc in [false, true], tm in [:none, :islands, :all], cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0]
-   s = allstatus[nuc,tm,cap]
-   s != :Optimal && println("$nuc, $tm, $cap: $s")
-end
-
-results[false,:all,0.1] = 0.5*(8.5223549e+05 + 8.5223282e+05)
-results[true,:none,0.01] = 0.5*(9.5207609e+05 + 9.5207205e+05)
-results[true,:none,0.005] = 0.5*(9.6381845e+05 + 9.6381386e+05)
-results[true,:islands,0.01] = 0.5*(9.2467909e+05 + 9.2467558e+05)
-
-results[false,:islands,0.005,:high,:low] = 0.5*(1.1262351e+06 + 1.1262346e+06)
-results[false,:all,0.005,:mid,:high] = 0.5*(1.1611178e+06 + 1.1611177e+06)
-results[false,:all,0.005,:mid,:mid] = 0.5*(1.0995099e+06 + 1.0995086e+06)
-results[false,:all,0.005,:low,:high] = 0.5*(1.0677177e+06 + 1.0677151e+06)
-
-=#
