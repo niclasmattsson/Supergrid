@@ -28,23 +28,6 @@ function CAnucleartest()
 	resultslist, capacity
 end
 
-function newrun1!(nuc, solarwind, tm, cap, resultslist, allstatus, path, runsuffix, disabletechs)
-	println("\n\n\nNew run: transmission=$tm, cap=$cap, solarwind=$solarwind, nuclear=$nuc.")
-	model = buildmodel(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05, 
-						carboncap=cap, nuclearallowed=nuc, transmissionallowed=tm, solarwindarea=solarwind, disabletechs=disabletechs)
-	println("\nSolving model...")
-	status = solve(model.modelname)
-	println("\nSolve status: $status")
-	resultslist[nuc,solarwind,tm,cap] = sum(getvalue(model.vars.Systemcost))
-	allstatus[nuc,solarwind,tm,cap] = status
-	JLD2.@save "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
-	println("\nReading results...")
-	results = readresults(model, status)
-	name = autorunname(model.options)
-	println("\nSaving results to disk...")
-	saveresults(results, name, resultsfile="$(path)supergridruns1$runsuffix.jld2")
-end
-
 function build_costs_from_runs(runsname, outname)
 	path = "D:\\model runs\\"
 	runs = listresults(resultsfile="$path$runsname")
@@ -68,28 +51,31 @@ function newrun!(namesuffix, options, hourinfo, sets, params, resultslist, allst
 	println("\nSolve status: $status")
 	resultslist[name] = sum(getvalue(model.vars.Systemcost))
 	allstatus[name] = status
-	JLD2.@save "$(path)supergridcosts3$runsuffix.jld2" resultslist allstatus
+	JLD2.@save "$(path)supergridcosts$runsuffix.jld2" resultslist allstatus
 	println("\nReading results...")
 	results = readresults(model, status)
 	println("\nSaving results to disk...")
-	saveresults(results, name, resultsfile="$(path)supergridruns3$runsuffix.jld2")
+	saveresults(results, name, resultsfile="$(path)supergridruns$runsuffix.jld2")
 end
 
 function supergridruns1()
 	resultslist = Dict()
 	allstatus = Dict()
 	path = "D:\\model runs\\"
-	runsuffix = "_mar10"
+	runsuffix = "_apr14"
 	for tm in [:none, :islands, :all]
 		for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0]
 			for solarwind in [1, 2], nuc in [false]
-				newrun1!(nuc, solarwind, tm, cap, resultslist, allstatus, path, runsuffix, [:csp])
+				options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21],
+						hours=1, maxbioenergy=0.05, carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
+						transmissionallowed=tm, disabletechs=[:csp])
+				newrun!("", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
 			end
 			for solarwind in [1], nuc in [true]
-				newrun1!(nuc, solarwind, tm, cap, resultslist, allstatus, path, runsuffix, [:csp])
-			end
-			for solarwind in [1, 2], nuc in [false]
-				newrun1!(nuc, solarwind, tm, cap, resultslist, allstatus, path, runsuffix, [])
+				options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21],
+						hours=1, maxbioenergy=0.05, carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
+						transmissionallowed=tm, disabletechs=[:csp])
+				newrun!("", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
 			end
 		end
 	end
@@ -97,34 +83,36 @@ function supergridruns1()
 end
 
 function supergridruns2()
-	resultslist = Dict()
-	allstatus = Dict()
 	path = "D:\\model runs\\"
-	runsuffix = "_mar10"
-	for tm in [:none, :islands, :all]
-		for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0]
-			for solarwind in [1, 2], nuc in [false]
-				options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05,
-						carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc, transmissionallowed=tm, disabletechs=[:csp])
-				params.transmissioninvestcost .*= 0.5
-				params.transmissionfixedcost .*= 0.5
-				newrun!("half_transmission_cost", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
-
-				options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05,
-						carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc, transmissionallowed=tm, disabletechs=[])
-				newrun!("", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
-			end
-		end
-	end
+	runsuffix = "_apr14"
+	JLD2.@load "$(path)supergridcosts$runsuffix.jld2" resultslist allstatus
 	for tm in [:islands, :all]
 		for cap in [0.001]
 			for solarwind in [1, 2], nuc in [false]
 				for solar in [:high, :mid, :low], battery in [:high, :mid, :low]
-					options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05,
-							carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc, transmissionallowed=tm, disabletechs=[:csp])
+					options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21],
+							hours=1, maxbioenergy=0.05, carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
+							transmissionallowed=tm, disabletechs=[:csp])
 					solarbatterycosts!(sets, params, solar, battery)
 					newrun!("solar=$solar, battery=$battery", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
 				end
+			end
+		end
+	end
+	for tm in [:none, :islands, :all]
+		for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0]
+			for solarwind in [1, 2], nuc in [false]
+				options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21],
+						hours=1, maxbioenergy=0.05, carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
+						transmissionallowed=tm, disabletechs=[:csp])
+				params.transmissioninvestcost .*= 0.5
+				params.transmissionfixedcost .*= 0.5
+				newrun!("half_transmission_cost", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
+
+				options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21],
+						hours=1, maxbioenergy=0.05, carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
+						transmissionallowed=tm, disabletechs=[])
+				newrun!("", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
 			end
 		end
 	end
@@ -245,13 +233,13 @@ end
 # Figure 2 in the supergrid paper (fig 1 is the eurasia map).
 function plot_supergridpaper_lines()
 	path = "D:\\model runs\\"
-	runsuffix = "_mar10"
-	resultsfile = "$(path)supergridruns1$runsuffix.jld2"
+	runsuffix = "_apr14"
+	resultsfile = "$(path)supergridruns$runsuffix.jld2"
 	r = loadresults(runname(1, :all, 1.0, false, false, false), resultsfile=resultsfile)
 	totaldemand = sum(r.params[:demand])	# 1.975066479481802e7	# (GWh/yr) 
-	JLD2.@load "$(path)supergridcosts1$runsuffix.jld2" resultslist allstatus
+	JLD2.@load "$(path)supergridcosts$runsuffix.jld2" resultslist allstatus
 	res = resultslist
-	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]	
+	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]	
 
 	function getresults(a,b,c,d,e,f)
 		cost = get(res, runname(a,b,c,d,e,f), NaN)				# M€/year
@@ -277,16 +265,15 @@ end
 
 function plot_supergridpaper_lines_transmission(allowcsp=false, allownuclear=false, halftmcost=false)
 	path = "D:\\model runs\\"
-	runsuffix = "_mar10"
-	csprunnumber = (allowcsp || halftmcost) ? 2 : 1
-	resultsfile = "$(path)supergridruns$csprunnumber$runsuffix.jld2"
+	runsuffix = "_apr14"
+	resultsfile = "$(path)supergridruns$runsuffix.jld2"
 	r = loadresults(runname(1, :all, 1.0, allowcsp, allownuclear, halftmcost), resultsfile=resultsfile)
 	totaldemand = sum(r.params[:demand])	# 1.975066479481802e7	# (GWh/yr) 
-	JLD2.@load "$(path)supergridcosts$csprunnumber$runsuffix.jld2" resultslist allstatus
+	JLD2.@load "$(path)supergridcosts$runsuffix.jld2" resultslist allstatus
 	res = resultslist
 	# JLD2.@load "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
 	# res = merge(res, resultslist)
-	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1]
+	carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]
 	titletext = "CSP " * (allowcsp ? "" : "not ") * "allowed" * (halftmcost ? ", half transmission cost" : "") * (allownuclear ? ", nuclear allowed" : "")
 
 	function getresults(a,b,c,d,e,f)
@@ -299,11 +286,11 @@ function plot_supergridpaper_lines_transmission(allowcsp=false, allownuclear=fal
 	carboncaps[1] = "none"
 
 	p = plot(string.(carboncaps), [resmat1 resmat2], color=[3 1 2 3 1 2], line=[:solid :solid :solid :dash :dash :dash])
-	display(plot(p, size=(850,450), ylim=(0,60), 
+	display(plot(p, size=(850,500), ylim=(0,71),
 					label=["R           " "C" "S" "R-Hland" "C-Hland" "S-Hland"],
-					line=3, tickfont=14, legendfont=14,
+					line=3, tickfont=14, legendfont=14, yticks=0:10:70,
 					titlefont=16, guidefont=14, xlabel="Global CO<sub>2</sub> cap [g CO<sub>2</sub>/kWh]", ylabel="Average system cost [€/MWh]",
-					left_margin=50px, gridlinewidth=1, title=titletext))
+					left_margin=50px, top_margin=10px, gridlinewidth=1, title=titletext))
 end
 
 runname(land::Int, tm::Symbol, cap::Float64, allowcsp::Bool, allownuclear::Bool, halftmcost::Bool) =
@@ -319,8 +306,8 @@ runname(land::Int, tm::Symbol, solar::Symbol, battery::Symbol) =
 # Figure 4 in the supergrid paper.
 function plot_supergridpaper_bubbles()
 	path = "D:\\model runs\\"
-	runsuffix = "_mar10"
-	JLD2.@load "$(path)supergridcosts3$runsuffix.jld2" resultslist allstatus
+	runsuffix = "_apr14"
+	JLD2.@load "$(path)supergridcosts$runsuffix.jld2" resultslist allstatus
 	res = resultslist
 	# showall(keys(res))
 	rows = [3 3 3 2 2 2 1 1 1]
@@ -345,12 +332,11 @@ function plot_supergridpaper_bubbles()
 end
 
 # Figure 3 in the supergrid paper.
-function plot_supergridpaper_energymix(cap=0.001, allowcsp=false, allownuclear=false, halftmcost=false)
+function plot_supergridpaper_energymix(allowcsp=false, allownuclear=false, halftmcost=false; cap=0.001, indices=collect(1:6))
 	path = "D:\\model runs\\"
-	runsuffix = "_mar10"
-	csprunnumber = (allowcsp || halftmcost) ? 2 : 1
-	resultsfile = "$(path)supergridruns$csprunnumber$runsuffix.jld2"
-	indices = (cap >= 0.1 || allownuclear) ? collect(1:6) : [2,3,5,6]
+	runsuffix = "_apr14"
+	resultsfile = "$(path)supergridruns$runsuffix.jld2"
+	# indices = (cap >= 0.1 || allownuclear) ? collect(1:6) : [2,3,5,6]
 	if allownuclear
 		indices = indices[indices .<= 3]
 	end
