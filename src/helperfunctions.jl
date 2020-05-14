@@ -109,19 +109,19 @@ end
 
 #=
 function printtable(title::String, setnames::Vector, datarows::Array, columnname::Symbol = :none)
-	println(title)
-	push!(setnames, :value)
-	df = DataFrame([fill(Symbol, length(setnames)-1); Float64], setnames, 0)
-	for row in datarows
-		push!(df, row)
-	end
-	if columnname != :none
-		df = unstack(df, columnname, :value)
-	end
-	show(IOContext(STDOUT, displaysize=(100,120)), "text/plain", df)		
+    println(title)
+    push!(setnames, :value)
+    df = DataFrame([fill(Symbol, length(setnames)-1); Float64], setnames, 0)
+    for row in datarows
+        push!(df, row)
+    end
+    if columnname != :none
+        df = unstack(df, columnname, :value)
+    end
+    show(IOContext(STDOUT, displaysize=(100,120)), "text/plain", df)        
 end
 
 printtable(jarr::JuMP.JuMPArray{Float64,2}) = printtable("", jarr)
 printtable(title::String, jarr::JuMP.JuMPArray{Float64,2}) =
-	println("$title\n", DataFrame([jarr.indexsets[1] jarr.innerArray], [:_; jarr.indexsets[2]]))
+    println("$title\n", DataFrame([jarr.indexsets[1] jarr.innerArray], [:_; jarr.indexsets[2]]))
 =#
