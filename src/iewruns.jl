@@ -237,13 +237,14 @@ function plot_supergridpaper_lines()
     resultsfile = "$(path)supergridruns$runsuffix.jld2"
     r = loadresults(runname(1, :all, 1.0, false, false, false), resultsfile=resultsfile)
     totaldemand = sum(r.params[:demand])    # 1.975066479481802e7   # (GWh/yr) 
+    existinghydro = sumdimdrop(r.Electricity[:hydro,:x0], dims=1)
     JLD2.@load "$(path)supergridcosts$runsuffix.jld2" resultslist allstatus
     res = resultslist
     carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]    
 
     function getresults(a,b,c,d,e,f)
         cost = get(res, runname(a,b,c,d,e,f), NaN)              # M€/year
-        return cost > 1e7 ? NaN : cost/totaldemand*1000     # €/MWh
+        return cost > 1e7 ? NaN : cost/(totaldemand - sum(existinghydro))*1000     # €/MWh
     end
 
     resmat2 = [getresults(1, tm, cap/1000, false, false, false) for cap in carboncaps, tm in [:islands, :all]]
@@ -269,6 +270,7 @@ function plot_supergridpaper_lines_transmission(allowcsp=false, allownuclear=fal
     resultsfile = "$(path)supergridruns$runsuffix.jld2"
     r = loadresults(runname(1, :all, 1.0, allowcsp, allownuclear, halftmcost), resultsfile=resultsfile)
     totaldemand = sum(r.params[:demand])    # 1.975066479481802e7   # (GWh/yr) 
+    existinghydro = sumdimdrop(r.Electricity[:hydro,:x0], dims=1)
     JLD2.@load "$(path)supergridcosts$runsuffix.jld2" resultslist allstatus
     res = resultslist
     # JLD2.@load "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
@@ -278,7 +280,7 @@ function plot_supergridpaper_lines_transmission(allowcsp=false, allownuclear=fal
 
     function getresults(a,b,c,d,e,f)
         cost = get(res, runname(a,b,c,d,e,f), NaN)              # M€/year
-        return cost > 1e7 ? NaN : cost/totaldemand*1000     # €/MWh
+        return cost > 1e7 ? NaN : cost/(totaldemand - sum(existinghydro))*1000     # €/MWh
     end
 
     resmat1 = [getresults(1, tm, cap/1000, allowcsp, allownuclear, halftmcost) for cap in carboncaps, tm in [:none, :islands, :all]]
@@ -286,9 +288,9 @@ function plot_supergridpaper_lines_transmission(allowcsp=false, allownuclear=fal
     carboncaps[1] = "none"
 
     p = plot(string.(carboncaps), [resmat1 resmat2], color=[3 1 2 3 1 2], line=[:solid :solid :solid :dash :dash :dash])
-    display(plot(p, size=(850,500), ylim=(0,71),
+    display(plot(p, size=(850,500), ylim=(0,81),
                     label=["R           " "C" "S" "R-Hland" "C-Hland" "S-Hland"],
-                    line=3, tickfont=14, legendfont=14, yticks=0:10:70,
+                    line=3, tickfont=14, legendfont=14, yticks=0:10:80,
                     titlefont=16, guidefont=14, xlabel="Global CO<sub>2</sub> cap [g CO<sub>2</sub>/kWh]", ylabel="Average system cost [€/MWh]",
                     left_margin=50px, top_margin=10px, gridlinewidth=1, title=titletext))
 end
