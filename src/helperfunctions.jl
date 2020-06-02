@@ -89,9 +89,7 @@ end
 
     # compute fillrange
     fillrange := if isstack
-        y, fr = StatsPlots.groupedbar_fillrange(y)
-        y = reverse(y, dims=2)
-        fr = reverse(fr, dims=2)
+        y, fr = StatsPlots.groupedbar_fillrange(reverse(y, dims=2))
         fr
     else
         get(plotattributes, :fillrange, nothing)
@@ -100,7 +98,7 @@ end
     seriestype := :bar
 
     if isstack
-        labels := haskey(plotattributes, :label) ? reverse(plotattributes[:label],dims=2) : ["y$i" for j = 1:1, i = nc:-1:1]
+        label := haskey(plotattributes, :label) ? reverse(plotattributes[:label],dims=2) : ["y$i" for j = 1:1, i = nc:-1:1]
         fillcolor --> permutedims(nc:-1:1)
     end
 
