@@ -2,24 +2,11 @@ using NamedArrays, StatsPlots, JLD2, Measures
 
 sumdimdrop(x::AbstractArray; dims) = dropdims(sum(x, dims=dims), dims=dims)
 
-# Convert a JuMPArray to an AxisArray. Uses current JuMPArray internals, will need a rewrite in the next JuMP version.
-AxisArrays.AxisArray(ja::JuMP.JuMPArray) = AxisArray(ja.innerArray, ja.indexsets...)
+# Convert a DenseAxisArray to an AxisArray. Uses current DenseAxisArray internals.
+AxisArrays.AxisArray(daa::Containers.DenseAxisArray) = AxisArray(daa.data, daa.axes)
 
-# Convert a JuMPDict to an AxisArray. Uses current JuMPDict internals, will need a rewrite in the next JuMP version.
-# function AxisArrays.AxisArray(jd::JuMP.JuMPDict)
-#   d = jd.tupledict
-#   k = keys(d)
-#   ndims = length(iterate(k)[1])
-#   sets = [unique(getindex.(k,dim)) for dim=1:ndims]
-#   a = AxisArray(zeros(length.(sets)...), sets...)
-#   for (key, value) in d
-#       a[key...] = value
-#   end
-#   return a
-# end
-
-# Convert a JuMPDict to a Dict. Uses current JuMPDict internals, will need a rewrite in the next JuMP version.
-getdict(jd::JuMP.JuMPDict) = jd.tupledict
+# Convert a SparseAxisArray to an AxisArray. Uses current SparseAxisArray internals.
+getdict(saa::Containers.SparseAxisArray) = saa.data
 
 function readresults(model::ModelInfo, status::Symbol)
     @unpack REGION, TECH, CLASS, HOUR, techtype, STORAGECLASS = model.sets
@@ -29,17 +16,17 @@ function readresults(model::ModelInfo, status::Symbol)
 
     params = Dict(:demand => demand, :classlimits => classlimits, :hydrocapacity => hydrocapacity)
 
-    cost = AxisArray(getvalue(Systemcost))
-    emis = AxisArray(getvalue(CO2emissions))
-    fuel = AxisArray(getvalue(FuelUse))
+    cost = AxisArray(value.(Systemcost))
+    emis = AxisArray(value.(CO2emissions))
+    fuel = AxisArray(value.(FuelUse))
     # getting Electricity for all set combos is slowest, so let's optimize storage format and use faster internal function call 
-    elec = Dict((k,c) => [JuMP._getValue(Electricity[r,k,c,h]) for h in HOUR, r in REGION] for k in TECH for c in CLASS[k]);
-    charge = getdict(getvalue(Charging))
+    elec = Dict((k,c) => [value.(Electricity[r,k,c,h]) for h in HOUR, r in REGION] for k in TECH for c in CLASS[k]);
+    charge = getdict(value.(Charging))
     # oops, StorageLevel is also slow
-    storage = Dict((k,c) => [JuMP._getValue(StorageLevel[r,k,c,h]) for h in HOUR, r in REGION] for k in storagetechs for c in STORAGECLASS[k]);
-    transmission = AxisArray(getvalue(Transmission))
-    transmissioncapac = AxisArray(getvalue(TransmissionCapacity))
-    capac = getdict(getvalue(Capacity))
+    storage = Dict((k,c) => [value.(StorageLevel[r,k,c,h]) for h in HOUR, r in REGION] for k in storagetechs for c in STORAGECLASS[k]);
+    transmission = AxisArray(value.(Transmission))
+    transmissioncapac = AxisArray(value.(TransmissionCapacity))
+    capac = getdict(value.(Capacity))
 
     return Results(status, model.options, model.hourinfo, model.sets, params, cost, emis, fuel, elec, charge, storage, transmission, transmissioncapac, capac)
 end

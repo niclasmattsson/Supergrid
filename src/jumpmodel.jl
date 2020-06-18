@@ -1,23 +1,27 @@
 function initjumpmodel(options)
     @unpack solver, threads, showsolverlog = options
     if solver == :cplex
-    # https://www.ibm.com/support/knowledgecenter/SSSA5P_12.6.0/ilog.odms.studio.help/CPLEX/ReleaseNotes/topics/releasenotes126/newParameterNames.html
-    # https://www.ibm.com/support/knowledgecenter/SSSA5P_12.8.0/ilog.odms.cplex.help/CPLEX/Parameters/topics/introListAlpha.html
-    # https://www.ibm.com/support/knowledgecenter/SSSA5P_12.8.0/ilog.odms.cplex.help/CPLEX/UsrMan/topics/cont_optim/barrier/19_tuning_title_synopsis.html
-        m = Model(solver=CplexSolver(CPXPARAM_LPMethod=4, CPXPARAM_Threads=threads, CPXPARAM_Read_Scale=1,
-                    CPXPARAM_Preprocessing_Dual=-1, CPXPARAM_Barrier_Crossover=-1, CPXPARAM_Emphasis_Numerical=1,
-                    CPXPARAM_ScreenOutput=Int(showsolverlog)))
-                    # CPXPARAM_Barrier_ConvergeTol=1e-8 (default), CPXPARAM_Barrier_Display=2,
-                    # CPXPARAM_Barrier_Crossover=-1 or 2, CPXPARAM_Emphasis_Memory=1,
-                    # Tom: CPXPARAM_Barrier_ColNonzeros=200, CPXPARAM_Preprocessing_Fill=0 (doesn't help)
-
+        # https://www.ibm.com/support/knowledgecenter/SSSA5P_12.6.0/ilog.odms.studio.help/CPLEX/ReleaseNotes/topics/releasenotes126/newParameterNames.html
+        # https://www.ibm.com/support/knowledgecenter/SSSA5P_12.8.0/ilog.odms.cplex.help/CPLEX/Parameters/topics/introListAlpha.html
+        # https://www.ibm.com/support/knowledgecenter/SSSA5P_12.8.0/ilog.odms.cplex.help/CPLEX/UsrMan/topics/cont_optim/barrier/19_tuning_title_synopsis.html
+        m = Model(CPLEX.Optimizer)
+        set_optimizer_attributes(m, "CPXPARAM_LPMethod"=>4, "CPXPARAM_Threads"=>threads,
+            "CPXPARAM_Read_Scale"=>1, "CPXPARAM_Preprocessing_Dual"=>-1, "CPXPARAM_Barrier_Crossover"=>-1,
+            "CPXPARAM_Emphasis_Numerical"=>1, "CPXPARAM_ScreenOutput"=>Int(showsolverlog))
+                    # "CPXPARAM_Barrier_ConvergeTol"=>1e-8 (default), "CPXPARAM_Barrier_Display"=>2,
+                    # "CPXPARAM_Barrier_Crossover"=>-1 or 2, "CPXPARAM_Emphasis_Memory"=>1,
+                    # Tom: "CPXPARAM_Barrier_ColNonzeros"=>200, "CPXPARAM_Preprocessing_Fill"=>0 (doesn't help)
     elseif solver == :gurobi
-        m = Model(solver=GurobiSolver(Method=2, Threads=threads, NumericFocus=2, ScaleFlag=3, Crossover=0))
-                    # OptimalityTol=1e-9, FeasibilityTol=1e-9, NumericFocus=0-3, ScaleFlag=-1-3, Crossover=0
+        m = Model(Gurobi.Optimizer)
+        set_optimizer_attributes(m, "Method"=>2, "Threads"=>threads,
+            "NumericFocus"=>2, "ScaleFlag"=>3, "Crossover"=>0)
+            # "OptimalityTol"=>1e-9, "FeasibilityTol"=>1e-9, "NumericFocus"=>0-3, "ScaleFlag"=>-1-3
     elseif solver == :glpk
-        m = Model(solver=GLPKSolverLP(method=:InteriorPoint, msg_lev=GLPK.MSG_ON))
+        m = Model(GLPK.Optimizer)
+        set_optimizer_attributes(m, "method"=>:InteriorPoint, "msg_lev"=>GLPK.MSG_ON)
     elseif solver == :clp
-        m = Model(solver=ClpSolver(SolveType=4, LogLevel=4))
+        m = Model(Clp.Optimizer)
+        set_optimizer_attributes(m, "SolveType"=>4, "LogLevel"=>4)
     else
         println("No solver installed called $solver.")
     end
@@ -53,35 +57,35 @@ function setbounds(sets, params, vars, options)
     for r in REGION, k in TECH
         if techtype[k] == :vre || k == :csp
             for c in CLASS[k]
-                setupperbound(Capacity[r,k,c], classlimits[r,k,c])
+                set_upper_bound(Capacity[r,k,c], classlimits[r,k,c])
             end
         end
     end
     for r in REGION
-        setlowerbound(Capacity[r,:hydro,:x0], hydrocapacity[r,:x0])
+        set_lower_bound(Capacity[r,:hydro,:x0], hydrocapacity[r,:x0])
         for c in CLASS[:hydro]
             if hydroinvestmentsallowed
-                setupperbound(Capacity[r,:hydro,c], hydrocapacity[r,c])
+                set_upper_bound(Capacity[r,:hydro,c], hydrocapacity[r,c])
             else
-                setupperbound(Capacity[r,:hydro,c], c == :x0 ? hydrocapacity[r,c] : 0.0)
+                set_upper_bound(Capacity[r,:hydro,c], c == :x0 ? hydrocapacity[r,c] : 0.0)
             end
         end
     end
     if !nuclearallowed
         for r in REGION
-            setupperbound(Capacity[r,:nuclear,:_], 0.0)
+            set_upper_bound(Capacity[r,:nuclear,:_], 0.0)
         end
     end
     for r1 in REGION, r2 in REGION
         if transmissionallowed == :none || (transmissionallowed == :islands && !transmissionislands[r1,r2])
-            setupperbound(TransmissionCapacity[r1,r2], 0.0)
+            set_upper_bound(TransmissionCapacity[r1,r2], 0.0)
         end
     end
     for r in REGION, k in disabletechs, c in CLASS[k]
-        setupperbound(Capacity[r,k,c], 0.0)
+        set_upper_bound(Capacity[r,k,c], 0.0)
     end
     # for r in REGION
-    #   setupperbound(AnnualGeneration[r,:csp], 0.50 * sum(demand[r,h] for h in HOUR) * hoursperperiod)
+    #   set_upper_bound(AnnualGeneration[r,:csp], 0.50 * sum(demand[r,h] for h in HOUR) * hoursperperiod)
     # end
 end
 

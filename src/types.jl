@@ -42,17 +42,17 @@ struct Params
 end
 
 struct Vars
-    Systemcost                  ::JuMP.JuMPArray{JuMP.Variable,1}
-    CO2emissions                ::JuMP.JuMPArray{JuMP.Variable,1}
-    FuelUse                     ::JuMP.JuMPArray{JuMP.Variable,2}
-    Electricity                 ::JuMP.JuMPDict{JuMP.Variable,4}
-    AnnualGeneration            ::JuMP.JuMPArray{JuMP.Variable,2}
-    Charging                    ::JuMP.JuMPDict{JuMP.Variable,3}
-    StorageLevel                ::JuMP.JuMPDict{JuMP.Variable,4}
-    Transmission                ::JuMP.JuMPArray{JuMP.Variable,3}
-    TransmissionCapacity        ::JuMP.JuMPArray{JuMP.Variable,2}
-    Capacity                    ::JuMP.JuMPDict{JuMP.Variable,3}
-    SolarCapacity               ::JuMP.JuMPArray{JuMP.Variable,4}
+    Systemcost                  ::Containers.DenseAxisArray{VariableRef,1}
+    CO2emissions                ::Containers.DenseAxisArray{VariableRef,1}
+    FuelUse                     ::Containers.DenseAxisArray{VariableRef,2}
+    Electricity                 ::Containers.SparseAxisArray{VariableRef,4}
+    AnnualGeneration            ::Containers.DenseAxisArray{VariableRef,2}
+    Charging                    ::Containers.SparseAxisArray{VariableRef,3}
+    StorageLevel                ::Containers.SparseAxisArray{VariableRef,4}
+    Transmission                ::Containers.DenseAxisArray{VariableRef,3}
+    TransmissionCapacity        ::Containers.DenseAxisArray{VariableRef,2}
+    Capacity                    ::Containers.SparseAxisArray{VariableRef,3}
+    SolarCapacity               ::Containers.DenseAxisArray{VariableRef,4}
 end
 
 # add type info here too

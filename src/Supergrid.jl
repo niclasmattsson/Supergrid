@@ -95,7 +95,8 @@ function runmodel(; name="", group="", optionlist...)       # carbon tax in €/
         println("\nSolving model...")
     end
 
-    status = solve(model.modelname)
+    optimize!(model.modelname)
+    status = Symbol(termination_status(model.modelname))
     println("\nSolve status: $status")
 
     println("\nReading results...")
@@ -113,7 +114,7 @@ function runmodel(; name="", group="", optionlist...)       # carbon tax in €/
 
     annualelec, capac, tcapac, chart = analyzeresults(results)
 
-    if status != :Optimal
+    if status != :OPTIMAL
         @warn "The solver did not report an optimal solution. It could still be fine, but examine the log."
     end
 
