@@ -334,7 +334,8 @@ function plot_supergridpaper_bubbles()
 end
 
 # Figure 3 in the supergrid paper.
-function plot_supergridpaper_energymix(allowcsp=false, allownuclear=false, halftmcost=false; cap=0.001, indices=collect(1:6))
+function plot_supergridpaper_energymix(allowcsp=false, allownuclear=false, halftmcost=false;
+                                        cap=0.001, indices=collect(1:6), deletetechs=[1,2,6,7,12])
     path = "D:\\model runs\\"
     runsuffix = "_apr14"
     resultsfile = "$(path)supergridruns$runsuffix.jld2"
@@ -352,7 +353,11 @@ function plot_supergridpaper_energymix(allowcsp=false, allownuclear=false, halft
     cap1000 = round(Int, 1000*cap)
     titletext = "CSP " * (allowcsp ? "" : "not ") * "allowed" * (halftmcost ? ", half transmission cost" : "") *
                     (allownuclear ? ", nuclear allowed" : "") * ", $cap1000 g CO<sub>2</sub>/kWh"
-    plot_energymix(scen, resultsnames, resultsfile; size=(200+100*length(indices), 550), title=titletext)  #, deletetechs=[1,2,6,7,12])
+    plot_energymix(scen, resultsnames, resultsfile; size=(200+100*length(indices), 550), title=titletext, deletetechs=deletetechs)
+    # plot_energymix(["default land", "high land"],
+    #     ["regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, disabletechs=Symbol[:csp], islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21], solar=low, battery=high",
+    #      "regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, solarwindarea=2, disabletechs=Symbol[:csp], islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21], solar=low, battery=high"],
+    #     resultsfile; size=(400, 550), title="Solar low cost, battery high cost", deletetechs=[1,2,6,7,12])
 end
 
 function plot_energymix(scen, resultsnames, resultsfile; deletetechs=[], optionlist...)
@@ -374,6 +379,38 @@ function plot_energymix(scen, resultsnames, resultsfile; deletetechs=[], optionl
     lab[1] = "demand"
     display(plot!([xpos; xpos], [zeros(length(scen))'; demands'*hoursperperiod/1e6], line=3, color=:black, label=lab))
     nothing
+end
+
+function regionalcosts(allowcsp=false, allownuclear=false, halftmcost=false; cap=0.001, indices=collect(1:6), runsuffix="_apr14")
+    path = "D:\\model runs\\"
+    resultsfile = "$(path)supergridruns$runsuffix.jld2"
+    # indices = (cap >= 0.1 || allownuclear) ? collect(1:6) : [2,3,5,6]
+    if allownuclear
+        indices = indices[indices .<= 3]
+    end
+    islandindexes=[1:8, 9:15, 16:21, 1:21]
+    scen = ["R", "C", "S", "R-Hland", "C-Hland", "S-Hland"][indices]
+    resultsnames = [runname(1, :none, cap, allowcsp, allownuclear, halftmcost),
+                    runname(1, :islands, cap, allowcsp, allownuclear, halftmcost),
+                    runname(1, :all, cap, allowcsp, allownuclear, halftmcost),
+                    runname(2, :none, cap, allowcsp, allownuclear, halftmcost),
+                    runname(2, :islands, cap, allowcsp, allownuclear, halftmcost),
+                    runname(2, :all, cap, allowcsp, allownuclear, halftmcost)][indices]
+    for resultname in resultsnames
+        println(resultname, " ", resultsfile)
+        r = loadresults(resultname, resultsfile=resultsfile)
+        existinghydro = sumdimdrop(r.Electricity[:hydro,:x0], dims=1)
+        elec = sum(r.Electricity[k,c] for k in r.sets.TECH for c in r.sets.CLASS[k])
+        annualelec = sumdimdrop(elec, dims=1)
+        demand = sumdimdrop(r.params[:demand], dims=2)
+        cost_prod = r.Systemcost ./ (annualelec - existinghydro) * 1000
+        cost_dem = r.Systemcost ./ (demand - existinghydro) * 1000
+        regcost_prod = [sum(r.Systemcost[is]) ./ sum(annualelec[is] - existinghydro[is]) * 1000 for is in islandindexes]
+        regcost_dem = [sum(r.Systemcost[is]) ./ sum(demand[is] - existinghydro[is]) * 1000 for is in islandindexes]
+        # @show regcost_prod
+        @show regcost_dem
+        println()
+    end
 end
 
 function iew_readscenariodata(resultname, resultsfile)
