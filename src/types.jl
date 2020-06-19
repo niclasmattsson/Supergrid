@@ -47,7 +47,7 @@ struct Vars
     FuelUse                     ::Containers.DenseAxisArray{VariableRef,2}
     Electricity                 ::Containers.SparseAxisArray{VariableRef,4}
     AnnualGeneration            ::Containers.DenseAxisArray{VariableRef,2}
-    Charging                    ::Containers.SparseAxisArray{VariableRef,3}
+    Charging                    ::Containers.DenseAxisArray{VariableRef,3}
     StorageLevel                ::Containers.SparseAxisArray{VariableRef,4}
     Transmission                ::Containers.DenseAxisArray{VariableRef,3}
     TransmissionCapacity        ::Containers.DenseAxisArray{VariableRef,2}
@@ -115,7 +115,7 @@ struct Results
     CO2emissions                ::AxisArray{Float64,1}
     FuelUse                     ::AxisArray{Float64,2}
     Electricity                 ::Dict{Tuple{Symbol,Symbol}, Array{Float64,2}}
-    Charging                        ::Dict{Tuple{Symbol,Symbol,Int}, Float64}
+    Charging                        ::AxisArray{Float64,3}
     StorageLevel                    ::Dict{Tuple{Symbol,Symbol}, Array{Float64,2}}
     Transmission                ::AxisArray{Float64,3}
     TransmissionCapacity        ::AxisArray{Float64,2}

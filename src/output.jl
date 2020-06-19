@@ -21,7 +21,7 @@ function readresults(model::ModelInfo, status::Symbol)
     fuel = AxisArray(value.(FuelUse))
     # getting Electricity for all set combos is slowest, so let's optimize storage format and use faster internal function call 
     elec = Dict((k,c) => [value.(Electricity[r,k,c,h]) for h in HOUR, r in REGION] for k in TECH for c in CLASS[k]);
-    charge = getdict(value.(Charging))
+    charge = AxisArray(value.(Charging))
     # oops, StorageLevel is also slow
     storage = Dict((k,c) => [value.(StorageLevel[r,k,c,h]) for h in HOUR, r in REGION] for k in storagetechs for c in STORAGECLASS[k]);
     transmission = AxisArray(value.(Transmission))

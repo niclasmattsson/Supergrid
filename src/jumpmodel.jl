@@ -31,14 +31,16 @@ end
 function makevariables(m, sets)
     @unpack REGION, FUEL, TECH, CLASS, STORAGECLASS, HOUR, techtype = sets
 
+    storagetechs = [k for k in TECH if techtype[k] == :storage]
+
     @variables m begin
         Systemcost[r in REGION]                                                         # M€/year
         CO2emissions[r in REGION]                                                       # kton CO2/year
         FuelUse[r in REGION, f in FUEL] >= 0                                            # GWh fuel/year
         Electricity[r in REGION, k in TECH, c in CLASS[k], h in HOUR] >= 0              # GWh elec/period
         AnnualGeneration[r in REGION, k in TECH] >= 0                                   # GWh elec/year
-        Charging[r in REGION, k in TECH, h in HOUR; techtype[k] == :storage] >= 0       # GWh elec/period (electricity used to charge)
-        StorageLevel[r in REGION, k in TECH, c in STORAGECLASS[k], h in HOUR; techtype[k] == :storage] >= 0  # TWh elec (in storage)
+        Charging[r in REGION, k in storagetechs, h in HOUR] >= 0       # GWh elec/period (electricity used to charge)
+        StorageLevel[r in REGION, k in storagetechs, c in STORAGECLASS[k], h in HOUR] >= 0  # TWh elec (in storage)
         Transmission[r1 in REGION, r2 in REGION, h in HOUR] >= 0                        # GWh elec/period
         TransmissionCapacity[r1 in REGION, r2 in REGION] >= 0                           # GW elec
         Capacity[r in REGION, k in TECH, c in CLASS[k]] >= 0                            # GW elec
@@ -100,6 +102,8 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
     @unpack hoursperperiod = hourinfo
     @unpack carbontax, carboncap, rampingconstraints, maxbioenergy, globalnuclearlimit = options
 
+    storagetechs = [k for k in TECH if techtype[k] == :storage]
+
     @constraints m begin
         ElecCapacity[r in REGION, k in TECH, c in CLASS[k], h in HOUR],
             Electricity[r,k,c,h] <= Capacity[r,k,c] * (k == :csp ? 1 : cf[r,k,c,h]) * hoursperperiod
@@ -110,7 +114,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
                     demand[r,h] * hoursperperiod
 
         # <= instead of == to avoid need of slack variable to deal with spillage during spring floods, etc
-        StorageBalance[r in REGION, k in TECH, sc in STORAGECLASS[k], h in HOUR; techtype[k] == :storage],
+        StorageBalance[r in REGION, k in storagetechs, sc in STORAGECLASS[k], h in HOUR],
             (StorageLevel[r,k,sc,h] - StorageLevel[r,k,sc, (h>1) ? h-1 : length(HOUR)]) / 1 <=  # unit: energy diff per period (TWh/period)
                 0.001 * Charging[r,k,h] +
                 + (k == :hydro ? 0.001 * hoursperperiod * sum(cfhydroinflow[r,c,h] * Capacity[r,:hydro,c] for c in reservoirclass[sc])
@@ -119,10 +123,10 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
                                 : 0.0) +
                 - 0.001 * sum(Electricity[r,k,c,h]/efficiency[k] for c in reservoirclass[sc])
 
-        MaxStorageCapacity[r in REGION, k in TECH, sc in STORAGECLASS[k], h in HOUR; techtype[k] == :storage],
+        MaxStorageCapacity[r in REGION, k in storagetechs, sc in STORAGECLASS[k], h in HOUR],
             StorageLevel[r,k,sc,h] <= sum(Capacity[r,k,c] * dischargetime[r,k,c] for c in reservoirclass[sc]) / 1000
 
-        InitialStorageLevel[r in REGION, k in TECH, sc in STORAGECLASS[k]; techtype[k] == :storage],
+        InitialStorageLevel[r in REGION, k in storagetechs, sc in STORAGECLASS[k]],
             StorageLevel[r,k,sc,1] ==
                 initialstoragelevel * sum(Capacity[r,k,c] * dischargetime[r,k,c] for c in reservoirclass[sc]) / 1000
 
