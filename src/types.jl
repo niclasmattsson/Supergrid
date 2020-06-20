@@ -47,7 +47,7 @@ struct Vars
     FuelUse                     ::JuMP.JuMPArray{JuMP.Variable,2}
     Electricity                 ::JuMP.JuMPDict{JuMP.Variable,4}
     AnnualGeneration            ::JuMP.JuMPArray{JuMP.Variable,2}
-    Charging                    ::JuMP.JuMPDict{JuMP.Variable,3}
+    Charging                    ::JuMP.JuMPArray{JuMP.Variable,3}
     StorageLevel                ::JuMP.JuMPDict{JuMP.Variable,4}
     Transmission                ::JuMP.JuMPArray{JuMP.Variable,3}
     TransmissionCapacity        ::JuMP.JuMPArray{JuMP.Variable,2}
@@ -115,7 +115,7 @@ struct Results
     CO2emissions                ::AxisArray{Float64,1}
     FuelUse                     ::AxisArray{Float64,2}
     Electricity                 ::Dict{Tuple{Symbol,Symbol}, Array{Float64,2}}
-    Charging                        ::Dict{Tuple{Symbol,Symbol,Int}, Float64}
+    Charging                        ::AxisArray{Float64,3}
     StorageLevel                    ::Dict{Tuple{Symbol,Symbol}, Array{Float64,2}}
     Transmission                ::AxisArray{Float64,3}
     TransmissionCapacity        ::AxisArray{Float64,2}
