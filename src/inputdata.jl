@@ -317,10 +317,22 @@ function makeparameters(sets, options, hourinfo)
     #   display(plot(qq./maximum(qq,dims=1), size=(1850,950)))
     # end
 
+    transmissioncapacitydata = [
+          0.0     0.0    17.481  0.000  0.0    5.055  0.0    0.0
+          0.0     0.0    14.844  8.56   5.124  0.0    6.201  0.864
+         17.481  14.844   0.0    1.808  0.0    0.000  0.0    7.4
+          0.000   8.56    1.808  0.0    0.0    0.0    1.338  0.0
+          0.0     5.124   0.0    0.0    0.0    0.0    0.000  6.595
+          5.055   0.0     0.000  0.0    0.0    0.0    0.0    8.103
+          0.0     6.201   0.0    1.338  0.000  0.0    0.0    0.0
+          0.0     0.864   7.4    0.0    6.595  8.103  0.0    0.0
+    ]
+    transmissioncapacity = AxisArray(transmissioncapacitydata, REGION, REGION)  
+
     return Params(cf, transmissionlosses, demand, hydrocapacity, cfhydroinflow, classlimits, transmissionislands,
         efficiency, rampingrate, dischargetime, initialstoragelevel, minflow_existinghydro, emissionsCO2, fuelcost,
         variablecost, smalltransmissionpenalty, investcost, crf, fixedcost, transmissioninvestcost, transmissionfixedcost,
-        hydroeleccost, solarcombinedarea, pv_density, csp_density, cspsolarmultiple)
+        hydroeleccost, solarcombinedarea, pv_density, csp_density, cspsolarmultiple, transmissioncapacity)
 end
 
 # Run fix_timezone_error() if an error like this is produced (the build step should take care if this for most people):

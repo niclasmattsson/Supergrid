@@ -58,20 +58,19 @@ function makevariables(m, sets, options)
         Charging[r in REGION, k in storagetechs, h in HOUR] >= 0       # GWh elec/period (electricity used to charge)
         StorageLevel[r in REGION, k in storagetechs, c in STORAGECLASS[k], h in HOUR] >= 0  # TWh elec (in storage)
         Transmission[r1 in REGION, r2 in REGION, h in HOUR] >= 0                        # GWh elec/period
-        TransmissionCapacity[r1 in REGION, r2 in REGION] >= 0                           # GW elec
         Capacity[r in REGION, k in TECH, c in CLASS[k]] >= 0                            # GW elec
         SolarCapacity[r in REGION, k in [:pv, :csp], pv in CLASS[:pv], csp in CLASS[:csp]] >= 0     # GW elec
     end #variables
 
     return REGION, Vars(Systemcost, CO2emissions, FuelUse, Electricity, AnnualGeneration, Charging, StorageLevel,
-                    Transmission, TransmissionCapacity, Capacity, SolarCapacity)
+                    Transmission, Capacity, SolarCapacity)
 end
 
 function setbounds(REGION, sets, params, vars, options)
     @unpack TECH, CLASS, techtype = sets
-    @unpack Capacity, TransmissionCapacity = vars
-    @unpack classlimits, hydrocapacity, transmissionislands, demand = params
-    @unpack hydroinvestmentsallowed, nuclearallowed, transmissionallowed, disabletechs = options
+    @unpack Capacity = vars
+    @unpack classlimits, hydrocapacity, demand = params
+    @unpack hydroinvestmentsallowed, nuclearallowed, disabletechs = options
     for r in REGION, k in TECH
         if techtype[k] == :vre || k == :csp
             for c in CLASS[k]
@@ -94,11 +93,6 @@ function setbounds(REGION, sets, params, vars, options)
             set_upper_bound(Capacity[r,:nuclear,:_], 0.0)
         end
     end
-    for r1 in REGION, r2 in REGION
-        if transmissionallowed == :none || (transmissionallowed == :islands && !transmissionislands[r1,r2])
-            set_upper_bound(TransmissionCapacity[r1,r2], 0.0)
-        end
-    end
     for r in REGION, k in disabletechs, c in CLASS[k]
         set_upper_bound(Capacity[r,k,c], 0.0)
     end
@@ -112,9 +106,9 @@ function makeconstraints(REGION, m, sets, params, vars, hourinfo, options)
     @unpack cf, transmissionlosses, demand, cfhydroinflow, efficiency, rampingrate, dischargetime, initialstoragelevel,
             minflow_existinghydro, emissionsCO2, fuelcost, variablecost, smalltransmissionpenalty, investcost, crf, fixedcost,
             transmissioninvestcost, transmissionfixedcost, hydroeleccost, solarcombinedarea,
-            pv_density, csp_density, cspsolarmultiple = params
+            pv_density, csp_density, cspsolarmultiple, transmissioncapacity = params
     @unpack Systemcost, CO2emissions, FuelUse, Electricity, AnnualGeneration, Charging, StorageLevel,
-            Transmission, TransmissionCapacity, Capacity, SolarCapacity = vars
+            Transmission, Capacity, SolarCapacity = vars
     @unpack hoursperperiod = hourinfo
     @unpack carbontax, carboncap, rampingconstraints, maxbioenergy, globalnuclearlimit = options
 
@@ -159,13 +153,7 @@ function makeconstraints(REGION, m, sets, params, vars, hourinfo, options)
             Charging[r,:battery,h] <= Capacity[r,:battery, :_] * hoursperperiod
 
         MaxTransmissionCapacity[r1 in REGION, r2 in REGION, h in HOUR],
-            Transmission[r1,r2,h] <= TransmissionCapacity[r1,r2] * hoursperperiod
-
-        TwoWayStreet[r1 in REGION, r2 in REGION],
-            TransmissionCapacity[r1,r2] == TransmissionCapacity[r2,r1] 
-
-        NoTransmission[r1 in REGION, r2 in REGION; transmissioninvestcost[r1,r2] == 0],
-            TransmissionCapacity[r1,r2] == 0
+            Transmission[r1,r2,h] <= transmissioncapacity[r1,r2] * hoursperperiod
 
         Calculate_AnnualGeneration[r in REGION, k in TECH],
             AnnualGeneration[r,k] == sum(Electricity[r,k,c,h] for c in CLASS[k], h in HOUR)
@@ -207,7 +195,7 @@ function makeconstraints(REGION, m, sets, params, vars, hourinfo, options)
                 + 0.001 * sum(Electricity[r,:hydro,c,h] * hydroeleccost[r,c] for c in CLASS[:hydro], h in HOUR) +
                 + 0.001 * sum(Transmission[r,r2,h] * smalltransmissionpenalty for r2 in REGION, h in HOUR) +
                 + sum(Capacity[r,k,c] * (investcost[k,c] * crf[k] + fixedcost[k]) for k in TECH, c in CLASS[k]) +
-                + 0.5 * sum(TransmissionCapacity[r,r2] *
+                + 0.5 * sum(transmissioncapacity[r,r2] *
                             (transmissioninvestcost[r,r2] * crf[:transmission] + transmissionfixedcost[r,r2]) for r2 in REGION)
         # =#
     end #constraints
@@ -234,7 +222,7 @@ function makeconstraints(REGION, m, sets, params, vars, hourinfo, options)
     end
 
     return Constraints(ElecCapacity, ElecDemand, RampingDown, RampingUp, StorageBalance, MaxStorageCapacity, InitialStorageLevel,
-                MaxTransmissionCapacity, TwoWayStreet, NoTransmission, NoCharging, ChargingNeedsBattery,
+                MaxTransmissionCapacity, NoCharging, ChargingNeedsBattery,
                 Calculate_AnnualGeneration, Calculate_FuelUse, TotalCO2, Totalcosts)
 end
 

@@ -63,6 +63,7 @@ end
 function buildsetsparams(; optionlist...)
     println("\nReading input data...")
     options = merge(defaultoptions(), optionlist)
+    @assert options[:regionset] == :Europe8 "Only Europe8 supported for this test model (fixed transmission capacity)."
     hourinfo = HourSampling(options)
     @time sets = makesets(hourinfo, options)
     @time params = makeparameters(sets, options, hourinfo)
@@ -88,7 +89,6 @@ end
 # m, annualelec, capac, tcapac, chart = runmodel(carboncap=50, hours=3, [more options]...);
 function runmodel(; name="", group="", optionlist...)       # carbon tax in €/ton CO2
     REGION, model = buildmodel(; optionlist...)
-    @show REGION
 
     #writeMPS(model, "model3.mps")
     if model.options[:solver] == :cplex

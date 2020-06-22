@@ -39,6 +39,7 @@ struct Params
     pv_density                  ::Float64
     csp_density                 ::Float64
     cspsolarmultiple            ::Float64
+    transmissioncapacity        ::AxisArray{Float64,2}
 end
 
 struct Vars
@@ -50,7 +51,6 @@ struct Vars
     Charging                    ::Containers.DenseAxisArray{VariableRef,3}
     StorageLevel                ::Containers.SparseAxisArray{VariableRef,4}
     Transmission                ::Containers.DenseAxisArray{VariableRef,3}
-    TransmissionCapacity        ::Containers.DenseAxisArray{VariableRef,2}
     Capacity                    ::Containers.SparseAxisArray{VariableRef,3}
     SolarCapacity               ::Containers.DenseAxisArray{VariableRef,4}
 end
@@ -65,8 +65,6 @@ struct Constraints
     MaxStorageCapacity
     InitialStorageLevel
     MaxTransmissionCapacity
-    TwoWayStreet
-    NoTransmission
     NoHydroCharging
     ChargingNeedsBattery
     Calculate_AnnualGeneration
@@ -118,6 +116,5 @@ struct Results
     Charging                        ::AxisArray{Float64,3}
     StorageLevel                    ::Dict{Tuple{Symbol,Symbol}, Array{Float64,2}}
     Transmission                ::AxisArray{Float64,3}
-    TransmissionCapacity        ::AxisArray{Float64,2}
     Capacity                    ::Dict{Tuple{Symbol,Symbol,Symbol}, Float64}
 end

@@ -10,11 +10,11 @@ getdict(saa::Containers.SparseAxisArray) = saa.data
 
 function readresults(model::ModelInfo, status::Symbol)
     @unpack REGION, TECH, CLASS, HOUR, techtype, STORAGECLASS = model.sets
-    @unpack Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, TransmissionCapacity, Capacity = model.vars
-    @unpack demand, classlimits, hydrocapacity = model.params
+    @unpack Systemcost, CO2emissions, FuelUse, Electricity, Charging, StorageLevel, Transmission, Capacity = model.vars
+    @unpack demand, classlimits, hydrocapacity, transmissioncapacity = model.params
     storagetechs = [k for k in TECH if techtype[k] == :storage]
 
-    params = Dict(:demand => demand, :classlimits => classlimits, :hydrocapacity => hydrocapacity)
+    params = Dict(:demand => demand, :classlimits => classlimits, :hydrocapacity => hydrocapacity, :transmissioncapacity => transmissioncapacity)
 
     cost = AxisArray(value.(Systemcost))
     emis = AxisArray(value.(CO2emissions))
@@ -25,10 +25,9 @@ function readresults(model::ModelInfo, status::Symbol)
     # oops, StorageLevel is also slow
     storage = Dict((k,c) => [value.(StorageLevel[r,k,c,h]) for h in HOUR, r in REGION] for k in storagetechs for c in STORAGECLASS[k]);
     transmission = AxisArray(value.(Transmission))
-    transmissioncapac = AxisArray(value.(TransmissionCapacity))
     capac = getdict(value.(Capacity))
 
-    return Results(status, model.options, model.hourinfo, model.sets, params, cost, emis, fuel, elec, charge, storage, transmission, transmissioncapac, capac)
+    return Results(status, model.options, model.hourinfo, model.sets, params, cost, emis, fuel, elec, charge, storage, transmission, capac)
 end
 
 function saveresults(results::Results, runname; resultsfile="", group="", compress=true)
@@ -106,8 +105,8 @@ const CHARTTECHS = Dict(
 
 function analyzeresults(results::Results)
     @unpack REGION, FUEL, TECH, CLASS, HOUR, techtype, STORAGECLASS = results.sets
-    @unpack demand, classlimits, hydrocapacity = results.params
-    @unpack CO2emissions, FuelUse, Electricity, Transmission, Capacity, TransmissionCapacity, Charging, StorageLevel, Systemcost = results
+    @unpack demand, classlimits, hydrocapacity, transmissioncapacity = results.params
+    @unpack CO2emissions, FuelUse, Electricity, Transmission, Capacity, Charging, StorageLevel, Systemcost = results
     
     hoursperperiod = results.hourinfo.hoursperperiod
 
@@ -125,7 +124,7 @@ function analyzeresults(results::Results)
         storage[:,i,:] = sum(StorageLevel[k,c] for c in STORAGECLASS[k])
     end
     existingstoragelevel = NamedArray(storage, (collect(HOUR), storagetechs, REGION), (:HOUR, :TECH, :REGION))
-    tcapac = NamedArray([TransmissionCapacity[r1,r2] for r1 in REGION, r2 in REGION], (REGION,REGION))
+    tcapac = NamedArray([transmissioncapacity[r1,r2] for r1 in REGION, r2 in REGION], (REGION,REGION))
 
     # @unpack ElecDemand = model.constraints
     # prices = [getdual(ElecDemand[r,h]) for r in REGION, h in HOUR]
