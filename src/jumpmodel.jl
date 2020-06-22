@@ -16,6 +16,15 @@ function initjumpmodel(options)
         set_optimizer_attributes(m, "Method"=>2, "Threads"=>threads,
             "NumericFocus"=>2, "ScaleFlag"=>3, "Crossover"=>0)
             # "OptimalityTol"=>1e-9, "FeasibilityTol"=>1e-9, "NumericFocus"=>0-3, "ScaleFlag"=>-1-3
+    elseif solver == :coluna
+        coluna = optimizer_with_attributes(
+            Coluna.Optimizer,
+            "params" => Coluna.Params(
+                solver = Coluna.Algorithm.TreeSearchAlgorithm() # default BCP
+            ),
+            "default_optimizer" => CPLEX.Optimizer # CPLEX for the master & the subproblems
+        )
+        m = BlockModel(coluna)
     elseif solver == :glpk
         m = Model(GLPK.Optimizer)
         set_optimizer_attributes(m, "method"=>:InteriorPoint, "msg_lev"=>GLPK.MSG_ON)
@@ -28,8 +37,15 @@ function initjumpmodel(options)
     return m
 end
 
-function makevariables(m, sets)
-    @unpack REGION, FUEL, TECH, CLASS, STORAGECLASS, HOUR, techtype = sets
+function makevariables(m, sets, options)
+    @unpack solver = options
+    @unpack FUEL, TECH, CLASS, STORAGECLASS, HOUR, techtype = sets
+
+    if options[:solver] == :coluna
+        @axis(REGION, sets.REGION)
+    else
+        REGION = sets.REGION
+    end
 
     storagetechs = [k for k in TECH if techtype[k] == :storage]
 
@@ -47,12 +63,12 @@ function makevariables(m, sets)
         SolarCapacity[r in REGION, k in [:pv, :csp], pv in CLASS[:pv], csp in CLASS[:csp]] >= 0     # GW elec
     end #variables
 
-    return Vars(Systemcost, CO2emissions, FuelUse, Electricity, AnnualGeneration, Charging, StorageLevel,
+    return REGION, Vars(Systemcost, CO2emissions, FuelUse, Electricity, AnnualGeneration, Charging, StorageLevel,
                     Transmission, TransmissionCapacity, Capacity, SolarCapacity)
 end
 
-function setbounds(sets, params, vars, options)
-    @unpack REGION, TECH, CLASS, techtype = sets
+function setbounds(REGION, sets, params, vars, options)
+    @unpack TECH, CLASS, techtype = sets
     @unpack Capacity, TransmissionCapacity = vars
     @unpack classlimits, hydrocapacity, transmissionislands, demand = params
     @unpack hydroinvestmentsallowed, nuclearallowed, transmissionallowed, disabletechs = options
@@ -91,8 +107,8 @@ function setbounds(sets, params, vars, options)
     # end
 end
 
-function makeconstraints(m, sets, params, vars, hourinfo, options)
-    @unpack REGION, FUEL, TECH, CLASS, STORAGECLASS, HOUR, techtype, techfuel, reservoirclass = sets
+function makeconstraints(REGION, m, sets, params, vars, hourinfo, options)
+    @unpack FUEL, TECH, CLASS, STORAGECLASS, HOUR, techtype, techfuel, reservoirclass = sets
     @unpack cf, transmissionlosses, demand, cfhydroinflow, efficiency, rampingrate, dischargetime, initialstoragelevel,
             minflow_existinghydro, emissionsCO2, fuelcost, variablecost, smalltransmissionpenalty, investcost, crf, fixedcost,
             transmissioninvestcost, transmissionfixedcost, hydroeleccost, solarcombinedarea,
@@ -222,8 +238,7 @@ function makeconstraints(m, sets, params, vars, hourinfo, options)
                 Calculate_AnnualGeneration, Calculate_FuelUse, TotalCO2, Totalcosts)
 end
 
-function makeobjective(m, sets, vars)
-    @unpack REGION = sets
+function makeobjective(REGION, m, sets, vars)
     @unpack Systemcost = vars
 
     @objective m Min begin

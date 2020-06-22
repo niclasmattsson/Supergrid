@@ -3,7 +3,8 @@ module Supergrid
 export runmodel, buildmodel, readresults, saveresults, analyzeresults, listresults, loadresults, makesets, makeparameters,
         fix_timezone_error, chart_energymix_scenarios
 
-using JuMP, CPLEX, Gurobi, GLPKMathProgInterface, GLPK, Clp, Parameters, AxisArrays, Plots, JLD2, Statistics
+using JuMP, CPLEX, Gurobi, Coluna, BlockDecomposition, Parameters, AxisArrays, Plots, JLD2, Statistics,
+        GLPKMathProgInterface, GLPK, Clp
 
 include("helperfunctions.jl")
 include("types.jl")
@@ -72,25 +73,32 @@ function buildvarsmodel(options, hourinfo, sets, params)
     println("\nBuilding model...")
     modelname = initjumpmodel(options)
     print("  - variables:   ")
-    @time vars = makevariables(modelname, sets)
+    @time REGION, vars = makevariables(modelname, sets, options)
     print("  - extra bounds:")
-    @time setbounds(sets, params, vars, options)
+    @time setbounds(REGION, sets, params, vars, options)
     print("  - constraints: ")
-    @time constraints = makeconstraints(modelname, sets, params, vars, hourinfo, options)
+    @time constraints = makeconstraints(REGION, modelname, sets, params, vars, hourinfo, options)
     print("  - objective:   ")
-    @time makeobjective(modelname, sets, vars)
+    @time makeobjective(REGION, modelname, sets, vars)
 
-    return ModelInfo(modelname, sets, params, vars, constraints, hourinfo, options) 
+    return REGION, ModelInfo(modelname, sets, params, vars, constraints, hourinfo, options) 
 end
 
 # BASIC USAGE: (carbon tax 50 €/ton CO2, 3-hour time periods)
 # m, annualelec, capac, tcapac, chart = runmodel(carboncap=50, hours=3, [more options]...);
 function runmodel(; name="", group="", optionlist...)       # carbon tax in €/ton CO2
-    model = buildmodel(; optionlist...)
+    REGION, model = buildmodel(; optionlist...)
+    @show REGION
 
     #writeMPS(model, "model3.mps")
     if model.options[:solver] == :cplex
         println("\nSolving model using CPLEX version $(CPLEX.version())...")
+    elseif model.options[:solver] == :coluna
+        println("\nSolving model...")
+        @dantzig_wolfe_decomposition(model.modelname, decomposition, REGION)
+        master = getmaster(decomposition)
+        subproblems = getsubproblems(decomposition)
+        specify!.(subproblems, lower_multiplicity = 0, upper_multiplicity = 1)
     else
         println("\nSolving model...")
     end
