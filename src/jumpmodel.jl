@@ -57,7 +57,7 @@ function makevariables(m, sets, options)
         AnnualGeneration[r in REGION, k in TECH] >= 0                                   # GWh elec/year
         Charging[r in REGION, k in storagetechs, h in HOUR] >= 0       # GWh elec/period (electricity used to charge)
         StorageLevel[r in REGION, k in storagetechs, c in STORAGECLASS[k], h in HOUR] >= 0  # TWh elec (in storage)
-        Transmission[r1 in REGION, r2 in REGION, h in HOUR] >= 0                        # GWh elec/period
+        Transmission[r1 in REGION, r2 in sets.REGION, h in HOUR] >= 0                        # GWh elec/period
         Capacity[r in REGION, k in TECH, c in CLASS[k]] >= 0                            # GW elec
         SolarCapacity[r in REGION, k in [:pv, :csp], pv in CLASS[:pv], csp in CLASS[:csp]] >= 0     # GW elec
     end #variables
@@ -120,7 +120,7 @@ function makeconstraints(REGION, m, sets, params, vars, hourinfo, options)
 
         ElecDemand[r in REGION, h in HOUR],
             sum(Electricity[r,k,c,h] for k in TECH, c in CLASS[k]) - sum(Charging[r,k,h] for k in TECH if techtype[k] == :storage) +
-                + sum((1-transmissionlosses[r2,r])*Transmission[r2,r,h] - Transmission[r,r2,h] for r2 in REGION) >=
+                + sum((1-transmissionlosses[r2,r])*Transmission[r2,r,h] - Transmission[r,r2,h] for r2 in sets.REGION) >=
                     demand[r,h] * hoursperperiod
 
         # <= instead of == to avoid need of slack variable to deal with spillage during spring floods, etc
@@ -152,7 +152,7 @@ function makeconstraints(REGION, m, sets, params, vars, hourinfo, options)
         ChargingNeedsBattery[r in REGION, h in HOUR],
             Charging[r,:battery,h] <= Capacity[r,:battery, :_] * hoursperperiod
 
-        MaxTransmissionCapacity[r1 in REGION, r2 in REGION, h in HOUR],
+        MaxTransmissionCapacity[r1 in REGION, r2 in sets.REGION, h in HOUR],
             Transmission[r1,r2,h] <= transmissioncapacity[r1,r2] * hoursperperiod
 
         Calculate_AnnualGeneration[r in REGION, k in TECH],
@@ -193,10 +193,10 @@ function makeconstraints(REGION, m, sets, params, vars, hourinfo, options)
                 + 0.001 * carbontax * CO2emissions[r] +
                 + 0.001 * sum(Electricity[r,k,c,h] * variablecost[k] for k in TECH, c in CLASS[k], h in HOUR) +
                 + 0.001 * sum(Electricity[r,:hydro,c,h] * hydroeleccost[r,c] for c in CLASS[:hydro], h in HOUR) +
-                + 0.001 * sum(Transmission[r,r2,h] * smalltransmissionpenalty for r2 in REGION, h in HOUR) +
+                + 0.001 * sum(Transmission[r,r2,h] * smalltransmissionpenalty for r2 in sets.REGION, h in HOUR) +
                 + sum(Capacity[r,k,c] * (investcost[k,c] * crf[k] + fixedcost[k]) for k in TECH, c in CLASS[k]) +
                 + 0.5 * sum(transmissioncapacity[r,r2] *
-                            (transmissioninvestcost[r,r2] * crf[:transmission] + transmissionfixedcost[r,r2]) for r2 in REGION)
+                            (transmissioninvestcost[r,r2] * crf[:transmission] + transmissionfixedcost[r,r2]) for r2 in sets.REGION)
         # =#
     end #constraints
 
