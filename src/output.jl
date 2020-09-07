@@ -311,6 +311,13 @@ function readscenariodata(resultname, resultsfile)
     return totalelec, totaldemand, hoursperperiod, displayorder, techlabels, palette
 end
 
+function getlines(r, tcapac)
+    reg = r.sets.REGION
+    ii = findall(tcapac.>0)
+    tc = [round(Int, tcapac[i]*1000) for i in ii if i[1]>i[2]]
+    conn = [(reg[i[1]], reg[i[2]]) for i in ii if i[1]>i[2]]
+    return sortslices([tc conn], dims=1, rev=true)
+end
 
 
 
