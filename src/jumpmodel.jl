@@ -12,8 +12,8 @@ function initjumpmodel(options)
                     # Tom: CPXPARAM_Barrier_ColNonzeros=200, CPXPARAM_Preprocessing_Fill=0 (doesn't help)
 
     elseif solver == :gurobi
-        m = Model(solver=GurobiSolver(Method=2, Threads=threads, NumericFocus=2, ScaleFlag=3, Crossover=0))
-                    # OptimalityTol=1e-9, FeasibilityTol=1e-9, NumericFocus=0-3, ScaleFlag=-1-3, Crossover=0
+        m = Model(solver=GurobiSolver(Method=2, Threads=threads, BarConvTol=0, Crossover=0)) 
+                # BarConvTol=1e-8, NumericFocus=2 (0-3), ScaleFlag=3 (-1-3), Crossover=0
     elseif solver == :glpk
         m = Model(solver=GLPKSolverLP(method=:InteriorPoint, msg_lev=GLPK.MSG_ON))
     elseif solver == :clp
