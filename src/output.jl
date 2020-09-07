@@ -180,7 +180,8 @@ function analyzeresults(results::Results)
                 display(round.(lcoe_tot, digits=2))
             else
                 stackedbar(["TOTAL"], collect(annualelec[displayorder,:TOTAL]')/1e3; labels=techlabels, left_margin=30px,
-                    size=(350,600), line=0, tickfont=14, legendfont=14, color_palette=palette, yformatter=:plain, optionlist...)
+                    size=(350,600), line=0, tickfont=14, legendfont=14, color_palette=palette, yformatter=:plain,
+                    legend = :outertopright, optionlist...)
                 xpos = (1:1)' .- 0.5
                 totdemand = [sum(demand)]
                 display(plot!([xpos; xpos], [zeros(1)'; totdemand*hoursperperiod/1e3], line=3, color=:black,
