@@ -319,6 +319,29 @@ function getlines(r, tcapac)
     return sortslices([tc conn], dims=1, rev=true)
 end
 
+function exportwindresults(r, name)
+    classes = r.sets.CLASS[:wind][1:5]
+    electricity = Dict(c => sum(r.Electricity[:wind, c], dims=1) for c in classes)
+    off_electricity = Dict(c => sum(r.Electricity[:offwind, c], dims=1) for c in classes)
+    open("D:/GISdata/output/windresults_$name.csv", "w") do io
+        write(io, "region, cap1, cap2, cap3, cap4, cap5, ")
+        write(io, "offcap1, offcap2, offcap3, offcap4, offcap5, ")
+        write(io, "elec1, elec2, elec3, elec4, elec5, ")
+        write(io, "offelec1, offelec2, offelec3, offelec4, offelec5\n")
+        for (i, reg) in enumerate(r.sets.REGION)
+            cap = [round(1000 * r.Capacity[reg, :wind, c], digits=3) for c in classes]
+            offcap = [round(1000 * r.Capacity[reg, :offwind, c], digits=3) for c in classes]
+            elec = [round(electricity[c][i], digits=3) for c in classes]
+            offelec = [round(off_electricity[c][i], digits=3) for c in classes]
+            write(io, string(reg), ", ")
+            write(io, join(cap, ", "))
+            write(io, join(offcap, ", "))
+            write(io, join(elec, ", "))
+            write(io, join(offelec, ", "))
+            write(io, "\n")
+        end
+    end
+end
 
 
 
