@@ -161,7 +161,7 @@ function analyzeresults(results::Results)
 
             lr = length(REGION)
             stackedbar(String.(REGION), collect(annualelec[displayorder,1:end-1]'/1000); labels=techlabels, size=(340+70*lr,550), left_margin=25px,
-                line=0, tickfont=14, legendfont=14, guidefont=14, color_palette=palette, ylabel="TWh/year", yformatter=:plain, optionlist...)
+                line=0, tickfont=10, legendfont=14, guidefont=14, color_palette=palette, ylabel="TWh/year", yformatter=:plain, optionlist...)
 
             xpos = (1:lr)' .- 0.5
             demandtext = ["demand" permutedims(repeat([""],lr-1))]
