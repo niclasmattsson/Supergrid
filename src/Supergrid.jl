@@ -8,7 +8,9 @@ using JuMP, CPLEX, Gurobi, GLPKMathProgInterface, GLPK, Clp, Parameters, AxisArr
 include("helperfunctions.jl")
 include("types.jl")
 include("inputdata.jl")
+include("builddispatch.jl")
 include("jumpmodel.jl")
+include("dispatchmodel.jl")
 include("output.jl")
 include("iewruns.jl")
 
