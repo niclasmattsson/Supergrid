@@ -133,8 +133,8 @@ function makeparameters(sets, options, hourinfo)
     monthlyinflow = AxisArray(zeros(numregions,nhydro,12), REGION, CLASS[:hydro], 1:12)
     cfhydroinflow = AxisArray(zeros(numregions,nhydro,nhours), REGION, CLASS[:hydro], HOUR)
     dischargetime = AxisArray(zeros(numregions,3,1+nhydro+nclasses), REGION, [:hydro,:battery,:csp], [CLASS[:hydro]; CLASS[:csp]; :_])
-    
-    hydrocapacity[:,:x0] = hydrovars["existingcapac"][activeregions]
+
+    hydrocapacity[:,:x0] = typeof(hydrovars["existingcapac"]) == Float64 ? [hydrovars["existingcapac"]] : hydrovars["existingcapac"][activeregions]
     hydrocapacity[:,2:end] = reshape(hydrovars["potentialcapac"][activeregions,:,:], numregions, nhydro-1)
     hydrocapacity[isnan.(hydrocapacity)] = zeros(sum(isnan.(hydrocapacity)))
 
@@ -179,9 +179,16 @@ function makeparameters(sets, options, hourinfo)
 
     # read regional distances from Matlab file
     distancevars = matread(joinpath(inputdata, "distances_$regionset.mat"))
-    distances = distancevars["distances"][activeregions,activeregions]
-    connected = distancevars["connected"][activeregions,activeregions]
-    connectedoffshore = distancevars["connectedoffshore"][activeregions,activeregions]
+
+    if typeof(distancevars["distances"]) == Float64
+        distances = fill(distancevars["distances"], 1, 1)
+        connected = fill(distancevars["connected"], 1, 1)
+        connectedoffshore = fill(distancevars["connectedoffshore"], 1, 1)
+    else 
+        distances = distancevars["distances"][activeregions,activeregions]
+        connected = distancevars["connected"][activeregions,activeregions]
+        connectedoffshore = distancevars["connectedoffshore"][activeregions,activeregions]
+    end
 
     # add connection from south-central China to Germany
     indexGER = findfirst(REGION .== :GER)
