@@ -39,6 +39,8 @@ defaultoptions() = Dict(
     :rampingcosts => false,
     :disabletechs => [],
     :disableregions => [],
+    :sspscenario => "ssp2-34",          # SSP scenario for synthetic demand
+    :sspyear => 2050,                   # SSP year for synthetic demand
     :datafolder => "",                  # Full path to GIS input data. Set to "" to use the folder in HOMEDIR/.GlobalEnergyGIS_config.
     :resultsfile => "results.jld2"      # use "" to skip saving the results in the database
 )

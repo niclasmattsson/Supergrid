@@ -101,7 +101,8 @@ CRF(r,T) = r / (1 - 1/(1+r)^T)
 
 function makeparameters(sets, options, hourinfo)
     @unpack REGION, FUEL, TECH, CLASS, HOUR, dataregions = sets
-    @unpack discountrate, datayear, regionset, solarwindarea, islandindexes, inputdatasuffix = options
+    @unpack discountrate, datayear, regionset, solarwindarea, islandindexes,
+            inputdatasuffix, sspscenario, sspyear = options
 
     hoursperyear = 24 * Dates.daysinyear(datayear)
     hoursperperiod = Int(hourinfo.hoursperperiod)
@@ -122,7 +123,8 @@ function makeparameters(sets, options, hourinfo)
     inputdata = getdatafolder(options)
 
     # read synthetic demand data (in UTC)
-    gisdemand = JLD.load(joinpath(inputdata, "SyntheticDemand_$(regionset)_$datayear.jld"), "demand")
+    gisdemand = JLD.load(joinpath(inputdata,
+        "SyntheticDemand_$(regionset)_$sspscenario-$(sspyear)_$datayear.jld"), "demand")
     for i = 1:numregions
         demand[i,:] = reducehours(gisdemand[:,i], 1, hourinfo) / 1000       # GW
     end
