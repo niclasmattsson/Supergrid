@@ -28,4 +28,5 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 TimeZones = "f269a46b-ccf7-5d73-abea-4c690281aa53"
 
 [compat]
-JuMP = "0.18.6"
+CPLEX = "~0.6"
+JuMP = "~0.18"
