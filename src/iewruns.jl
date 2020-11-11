@@ -62,19 +62,23 @@ function supergridruns1()
     resultslist = Dict()
     allstatus = Dict()
     path = "D:\\model runs\\"
-    runsuffix = "_apr14"
+    runsuffix = "_oct13"
     for tm in [:none, :islands, :all]
         for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0]
             for solarwind in [1, 2], nuc in [false]
-                options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21],
-                        hours=1, maxbioenergy=0.05, carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
-                        transmissionallowed=tm, disabletechs=[:csp])
+                options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21,
+                    islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05,
+                    sspscenario="ssp2-26", sspyear=2050, datayear=2018,
+                    carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
+                    transmissionallowed=tm, disabletechs=[:csp])
                 newrun!("", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
             end
             for solarwind in [1], nuc in [true]
-                options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21],
-                        hours=1, maxbioenergy=0.05, carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
-                        transmissionallowed=tm, disabletechs=[:csp])
+                options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21,
+                    islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05,
+                    sspscenario="ssp2-26", sspyear=2050, datayear=2018,
+                    carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
+                    transmissionallowed=tm, disabletechs=[:csp])
                 newrun!("", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
             end
         end
@@ -84,35 +88,49 @@ end
 
 function supergridruns2()
     path = "D:\\model runs\\"
-    runsuffix = "_apr14"
+    runsuffix = "_oct13"
     JLD2.@load "$(path)supergridcosts$runsuffix.jld2" resultslist allstatus
-    for tm in [:islands, :all]
-        for cap in [0.001]
-            for solarwind in [1, 2], nuc in [false]
-                for solar in [:high, :mid, :low], battery in [:high, :mid, :low]
-                    options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21],
-                            hours=1, maxbioenergy=0.05, carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
-                            transmissionallowed=tm, disabletechs=[:csp])
-                    solarbatterycosts!(sets, params, solar, battery)
-                    newrun!("solar=$solar, battery=$battery", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
-                end
-            end
-        end
-    end
     for tm in [:none, :islands, :all]
         for cap in [1, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0]
             for solarwind in [1, 2], nuc in [false]
-                options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21],
-                        hours=1, maxbioenergy=0.05, carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
-                        transmissionallowed=tm, disabletechs=[:csp])
+                options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21,
+                    islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05,
+                    sspscenario="ssp2-26", sspyear=2050, datayear=2018,
+                    carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
+                    transmissionallowed=tm, disabletechs=[:csp])
                 params.transmissioninvestcost .*= 0.5
                 params.transmissionfixedcost .*= 0.5
                 newrun!("half_transmission_cost", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
 
-                options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21, islandindexes=[1:8, 9:15, 16:21],
-                        hours=1, maxbioenergy=0.05, carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
-                        transmissionallowed=tm, disabletechs=[])
+                options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21,
+                    islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05,
+                    sspscenario="ssp2-26", sspyear=2050, datayear=2018,
+                    carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
+                    transmissionallowed=tm, disabletechs=[])
                 newrun!("", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
+            end
+        end
+    end
+    resultslist, allstatus
+end
+
+function supergridruns3()
+    path = "D:\\model runs\\"
+    runsuffix = "_oct13"
+    JLD2.@load "$(path)supergridcosts$runsuffix.jld2" resultslist allstatus
+    for combo in [("ssp2-26", 2018), ("ssp2-26", 2015), ("ssp2-26", 2005), ("ssp1-45", 2018)]
+        sspscen, erayear = combo
+        for tm in [:islands, :all], cap in [0.001]
+            for solarwind in [1, 2], nuc in [false]
+                for solar in [:high, :mid, :low], battery in [:high, :mid, :low]
+                    options, hourinfo, sets, params = buildsetsparams(regionset=:Eurasia21,
+                        islandindexes=[1:8, 9:15, 16:21], hours=1, maxbioenergy=0.05,
+                        sspscenario=sspscen, sspyear=2050, datayear=erayear,
+                        carboncap=cap, solarwindarea=solarwind, nuclearallowed=nuc,
+                        transmissionallowed=tm, disabletechs=[:csp])
+                    solarbatterycosts!(sets, params, solar, battery)
+                    newrun!("solar=$solar, battery=$battery", options, hourinfo, sets, params, resultslist, allstatus, path, runsuffix)
+                end
             end
         end
     end
@@ -231,44 +249,49 @@ function mergeresults()
 end
 
 # Figure 2 in the supergrid paper (fig 1 is the eurasia map).
-function plot_supergridpaper_lines()
+function plot_supergridpaper_lines(ssp="ssp2-34", datayear=2018; runsuffix="_oct13")
     path = "D:\\model runs\\"
-    runsuffix = "_apr14"
     resultsfile = "$(path)supergridruns$runsuffix.jld2"
-    r = loadresults(runname(1, :all, 1.0, false, false, false), resultsfile=resultsfile)
+    oldresults = (runsuffix == "_apr14")
+    r = loadresults(runname(1, :all, 1.0, ssp, datayear, false, false, false; oldresults=oldresults), resultsfile=resultsfile)
     totaldemand = sum(r.params[:demand])    # 1.975066479481802e7   # (GWh/yr) 
     existinghydro = sumdimdrop(r.Electricity[:hydro,:x0], dims=1)
     JLD2.@load "$(path)supergridcosts$runsuffix.jld2" resultslist allstatus
     res = resultslist
     carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]    
 
-    function getresults(a,b,c,d,e,f)
-        cost = get(res, runname(a,b,c,d,e,f), NaN)              # M€/year
-        return cost > 1e7 ? NaN : cost/(totaldemand - sum(existinghydro))*1000     # €/MWh
+    function getresults(a,b,c,d,e,f,g,h)
+        cost = get(res, runname(a,b,c,d,e,f,g,h; oldresults=oldresults), NaN)    # M€/year
+        return cost > 1e7 ? NaN : cost/(totaldemand - sum(existinghydro))*1000 # €/MWh
     end
 
-    resmat2 = [getresults(1, tm, cap/1000, false, false, false) for cap in carboncaps, tm in [:islands, :all]]
-    resmat4 = [getresults(2, tm, cap/1000, false, false, false) for cap in carboncaps, tm in [:islands, :all]]
+    resmat2 = [getresults(1, tm, cap/1000, ssp, datayear, false, false, false)
+                    for cap in carboncaps, tm in [:islands, :all]]
+    resmat4 = [getresults(2, tm, cap/1000, ssp, datayear, false, false, false)
+                    for cap in carboncaps, tm in [:islands, :all]]
     carboncaps[1] = "none"
 
+    plotly()
     p = plot(string.(carboncaps), [resmat2 resmat4], color=[1 2 1 2], line=[:solid :solid :dash :dash])
-    display(plot(p, size=(850,450), ylim=(0,60), 
+    display(plot(p, size=(850,450), ylim=(0,61), 
                     label=["C" "S" "C-Hland" "S-Hland"],
                     line=3, tickfont=14, legendfont=14,
                     titlefont=16, guidefont=14, xlabel="Global CO<sub>2</sub> cap [g CO<sub>2</sub>/kWh]", ylabel="Average system cost [€/MWh]",
-                    left_margin=50px, gridlinewidth=1))
+                    legend = :outertopright, left_margin=50px, gridlinewidth=1))
     p2 = plot(string.(carboncaps), resmat2, title="Low solar & wind area", label=["" ""])
-    p4 = plot(string.(carboncaps), resmat4, title="High solar & wind area", label=[:islands :all])
+    p4 = plot(string.(carboncaps), resmat4, title="High solar & wind area", label=["islands" "all"])
     display(plot(p2, p4, layout=2, size=(1000,450), ylim=(0,60), line=3, tickfont=14, legendfont=14,
                     titlefont=16, guidefont=14, xlabel="Global CO<sub>2</sub> cap [g CO<sub>2</sub>/kWh]", ylabel="Average system cost [€/MWh]",
-                    left_margin=50px, gridlinewidth=1))
+                    legend = :outertopright, left_margin=50px, gridlinewidth=1))
+    
 end
 
-function plot_supergridpaper_lines_transmission(allowcsp=false, allownuclear=false, halftmcost=false)
+function plot_supergridpaper_lines_transmission(ssp="ssp2-34", datayear=2018,
+            allowcsp=false, allownuclear=false, halftmcost=false; runsuffix="_oct13")
     path = "D:\\model runs\\"
-    runsuffix = "_apr14"
     resultsfile = "$(path)supergridruns$runsuffix.jld2"
-    r = loadresults(runname(1, :all, 1.0, allowcsp, allownuclear, halftmcost), resultsfile=resultsfile)
+    oldresults = (runsuffix == "_apr14")
+    r = loadresults(runname(1, :all, 1.0, ssp, datayear, allowcsp, allownuclear, halftmcost; oldresults=oldresults), resultsfile=resultsfile)
     totaldemand = sum(r.params[:demand])    # 1.975066479481802e7   # (GWh/yr) 
     existinghydro = sumdimdrop(r.Electricity[:hydro,:x0], dims=1)
     JLD2.@load "$(path)supergridcosts$runsuffix.jld2" resultslist allstatus
@@ -276,84 +299,160 @@ function plot_supergridpaper_lines_transmission(allowcsp=false, allownuclear=fal
     # JLD2.@load "$(path)supergridcosts2$runsuffix.jld2" resultslist allstatus
     # res = merge(res, resultslist)
     carboncaps = Any[1000; 200; 100; 50; 20; 10; 5; 2; 1; 0]
-    titletext = "CSP " * (allowcsp ? "" : "not ") * "allowed" * (halftmcost ? ", half transmission cost" : "") * (allownuclear ? ", nuclear allowed" : "")
+    titletext = "CSP " * (allowcsp ? "" : "not ") * "allowed" *
+        (halftmcost ? ", half transmission cost" : "") *
+        (allownuclear ? ", nuclear allowed" : "") * 
+        (oldresults ? " [old results]" : " [$ssp, $datayear]")
 
-    function getresults(a,b,c,d,e,f)
-        cost = get(res, runname(a,b,c,d,e,f), NaN)              # M€/year
-        return cost > 1e7 ? NaN : cost/(totaldemand - sum(existinghydro))*1000     # €/MWh
+    function getresults(a,b,c,d,e,f,g,h)
+        cost = get(res, runname(a,b,c,d,e,f,g,h; oldresults=oldresults), NaN)    # M€/year
+        return cost > 1e7 ? NaN : cost/(totaldemand - sum(existinghydro))*1000 # €/MWh
     end
 
-    resmat1 = [getresults(1, tm, cap/1000, allowcsp, allownuclear, halftmcost) for cap in carboncaps, tm in [:none, :islands, :all]]
-    resmat2 = [getresults(2, tm, cap/1000, allowcsp, allownuclear, halftmcost) for cap in carboncaps, tm in [:none, :islands, :all]]
+    resmat1 = [getresults(1, tm, cap/1000, ssp, datayear, allowcsp, allownuclear, halftmcost)
+                    for cap in carboncaps, tm in [:none, :islands, :all]]
+    resmat2 = [getresults(2, tm, cap/1000, ssp, datayear, allowcsp, allownuclear, halftmcost)
+                    for cap in carboncaps, tm in [:none, :islands, :all]]
     carboncaps[1] = "none"
 
+    plotly()
     p = plot(string.(carboncaps), [resmat1 resmat2], color=[3 1 2 3 1 2], line=[:solid :solid :solid :dash :dash :dash])
     display(plot(p, size=(850,500), ylim=(0,81),
-                    label=["R           " "C" "S" "R-Hland" "C-Hland" "S-Hland"],
-                    line=3, tickfont=14, legendfont=14, yticks=0:10:80,
-                    titlefont=16, guidefont=14, xlabel="Global CO<sub>2</sub> cap [g CO<sub>2</sub>/kWh]", ylabel="Average system cost [€/MWh]",
-                    left_margin=50px, top_margin=10px, gridlinewidth=1, title=titletext))
+        label=["R           " "C" "S" "R-Hland" "C-Hland" "S-Hland"],
+        line=3, tickfont=14, legendfont=14, yticks=0:10:80, legend = :outertopright, 
+        titlefont=16, guidefont=14, xlabel="Global CO<sub>2</sub> cap [g CO<sub>2</sub>/kWh]", ylabel="Average system cost [€/MWh]",
+        left_margin=50px, top_margin=10px, gridlinewidth=1, title=titletext))
 end
 
-runname(land::Int, tm::Symbol, cap::Float64, allowcsp::Bool, allownuclear::Bool, halftmcost::Bool) =
+runname(land::Int, tm::Symbol, cap::Float64, ssp::String, datayear::Int, allowcsp::Bool,
+        allownuclear::Bool, halftmcost::Bool; oldresults=false) =
     "regionset=Eurasia21, " * (tm == :all ? "" : "transmissionallowed=$tm, ") *
-    (allownuclear ? "" : "nuclearallowed=false, ") * (cap == 1.0 ? "" : "carboncap=$cap, ") * (land == 1 ? "" : "solarwindarea=2, ") *
-    (allowcsp ? "" : "disabletechs=Symbol[:csp], ") * "islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]" * (halftmcost ? ", half_transmission_cost" : "")
+    (datayear == 2018 ? "" : "datayear=$datayear, ") *
+    (allownuclear ? "" : "nuclearallowed=false, ") *
+    (cap == 1.0 ? "" : "carboncap=$cap, ") *
+    (land == 1 ? "" : "solarwindarea=2, ") *
+    (allowcsp ? "" : "disabletechs=$(oldresults ? "Symbol" : "")[:csp], ") *
+    (ssp == "ssp2-34" ? "" : "sspscenario=$ssp, ") *
+    "islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21]" *
+    (halftmcost ? ", half_transmission_cost" : "")
 
-runname(land::Int, tm::Symbol, solar::Symbol, battery::Symbol) =
+runname(land::Int, tm::Symbol, ssp::String, datayear::Int, solar::Symbol, battery::Symbol;
+        oldresults=false) =
     "regionset=Eurasia21, " * (tm == :all ? "" : "transmissionallowed=$tm, ") *
-    "nuclearallowed=false, carboncap=0.001, " * (land == 1 ? "" : "solarwindarea=2, ") *
-    "disabletechs=Symbol[:csp], islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21], solar=$solar, battery=$battery"
+    (datayear == 2018 ? "" : "datayear=$datayear, ") *
+    "nuclearallowed=false, carboncap=0.001, " *
+    (land == 1 ? "" : "solarwindarea=2, ") *
+    "disabletechs=$(oldresults ? "Symbol" : "")[:csp], " *
+    (ssp == "ssp2-34" ? "" : "sspscenario=$ssp, ") *
+    "islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21], solar=$solar, battery=$battery"
 
 # Figure 4 in the supergrid paper.
-function plot_supergridpaper_bubbles()
+function plot_supergridpaper_bubbles(ssp="ssp2-34", datayear=2018; runsuffix="_oct13")
     path = "D:\\model runs\\"
-    runsuffix = "_apr14"
     JLD2.@load "$(path)supergridcosts$runsuffix.jld2" resultslist allstatus
+    oldresults = (runsuffix == "_apr14")
     res = resultslist
     # showall(keys(res))
     rows = [3 3 3 2 2 2 1 1 1]
     cols = [3 2 1 3 2 1 3 2 1]
-    r1 = [res[runname(1,:islands,solar,battery)]/res[runname(1,:all,solar,battery)]-1 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
-    r2 = [res[runname(2,:islands,solar,battery)]/res[runname(2,:all,solar,battery)]-1 for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
+    r1 = [res[runname(1,:islands,ssp,datayear,solar,battery; oldresults=oldresults)] /
+            res[runname(1,:all,ssp,datayear,solar,battery; oldresults=oldresults)]-1
+                for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
+    r2 = [res[runname(2,:islands,ssp,datayear,solar,battery; oldresults=oldresults)] /
+            res[runname(2,:all,ssp,datayear,solar,battery; oldresults=oldresults)]-1
+                for solar in [:high, :mid, :low], battery in [:high, :mid, :low]]
     bs = 0.4    # bubble size
     annotations1 = [(rows[i]-0.65*bs*sqrt(r1[i]*100/pi), cols[i], text("$(round(r1[i]*100, digits=1))%", :right)) for i=1:9]
     annotations2 = [(rows[i]-0.65*bs*sqrt(r2[i]*100/pi), cols[i], text("$(round(r2[i]*100, digits=1))%", :right)) for i=1:9]
-    s1 = scatter(rows, cols, markersize=reshape(sqrt.(r1*100/pi)*75*bs, (1,9)), annotations=annotations1, xlim=(0.4,3.4), ylim=(0.5,3.5), legend=false,
-                    title="Default solar & wind area", xlabel="battery cost", ylabel="solar PV cost", color=1,
-                    tickfont=14, guidefont=14)
+    titlesuffix = (oldresults ? " [old results]" : " [$ssp, $datayear]")
+    s1 = scatter(rows, cols, markersize=reshape(sqrt.(r1*100/pi)*75*bs, (1,9)),
+        annotations=annotations1, xlim=(0.4,3.4), ylim=(0.5,3.5), legend=false,
+        title="Default solar & wind area" * titlesuffix,
+        xlabel="battery cost", ylabel="solar PV cost", color=1, tickfont=14, guidefont=14)
     xticks!([1,2,3],["low","mid","high"])
     yticks!([1,2,3],["low","mid","high"])
-    s2 = scatter(rows, cols, markersize=reshape(sqrt.(r2*100/pi)*75*bs, (1,9)), annotations=annotations2, xlim=(0.4,3.4), ylim=(0.5,3.5), legend=false,
-                    title="High solar & wind area", xlabel="battery cost", ylabel="solar PV cost", color=1,
-                    tickfont=14, guidefont=14, left_margin=20px)
+    s2 = scatter(rows, cols, markersize=reshape(sqrt.(r2*100/pi)*75*bs, (1,9)),
+        annotations=annotations2, xlim=(0.4,3.4), ylim=(0.5,3.5), legend=false,
+        title="High solar & wind area" * titlesuffix,
+        xlabel="battery cost", ylabel="solar PV cost", color=1, tickfont=14, guidefont=14,
+        left_margin=20px)
     xticks!([1,2,3],["low","mid","high"])
     yticks!([1,2,3],["low","mid","high"])
     # display(plot(s2, size=(500,450)))
     display(plot(s1, s2, layout=2, size=(1000,450)))
 end
 
+function plot_supergridpaper_all_energymixes()
+    # PAPER VERSIONS (no R scenario, unused legend techs removed)
+    # plot_supergridpaper_energymix("ssp2-34", 2018, false, false, false,
+    #     indices=[2,3,5,6], deletetechs=[1,2,6,7,12], runsuffix="_apr14")
+    # plot_supergridpaper_energymix("ssp2-34", 2018, true, false, false,
+    #     indices=[2,3,4,5,6], deletetechs=[1,2,12], runsuffix="_apr14")
+    # plot_supergridpaper_energymix("ssp2-34", 2018, false, true, false,
+    #     indices=[1,2,3,4,5,6], deletetechs=[2,6,7,12], runsuffix="_apr14")
+    # plot_supergridpaper_energymix("ssp2-34", 2018, false, false, true,
+    #     indices=[2,3,4,5,6], deletetechs=[1,2,6,7,12], runsuffix="_apr14")   
+
+    # DISCUSSION VERSIONS (only infeasible runs removed)
+    # plot_supergridpaper_energymix("ssp2-34", 2018, false, false, false,
+    #     indices=[2,3,4,5,6], runsuffix="_apr14")
+    # plot_supergridpaper_energymix("ssp2-34", 2018, true, false, false,
+    #     indices=[2,3,4,5,6], runsuffix="_apr14")
+    # plot_supergridpaper_energymix("ssp2-34", 2018, false, true, false,
+    #     indices=[1,2,3,4,5,6], runsuffix="_apr14")
+    # plot_supergridpaper_energymix("ssp2-34", 2018, false, false, true,
+    #     indices=[2,3,4,5,6], runsuffix="_apr14")
+    # plot_supergridpaper_energymix("ssp2-26", 2018, false, false, false,
+    #     indices=[2,3,4,5,6], runsuffix="_oct13")
+    # plot_supergridpaper_energymix("ssp2-26", 2018, true, false, false,
+    #     indices=[2,3,4,5,6], runsuffix="_oct13")
+    # plot_supergridpaper_energymix("ssp2-26", 2018, false, true, false,
+    #     indices=[1,2,3,4,5,6], runsuffix="_oct13")
+    # plot_supergridpaper_energymix("ssp2-26", 2018, false, false, true,
+    #     indices=[2,3,4,5,6], runsuffix="_oct13")
+    plot_supergridpaper_energymix("ssp2-26", 2018, false, false, false,
+        indices=[2,3,5,6], runsuffix="_oct13",
+        extrasuffix=", solar=mid, battery=mid", ylims=(0,32))
+    plot_supergridpaper_energymix("ssp2-26", 2005, false, false, false,
+        indices=[2,3,5,6], runsuffix="_oct13",
+        extrasuffix=", solar=mid, battery=mid", ylims=(0,32))
+    plot_supergridpaper_energymix("ssp2-26", 2015, false, false, false,
+        indices=[2,3,5,6], runsuffix="_oct13",
+        extrasuffix=", solar=mid, battery=mid", ylims=(0,32))
+    plot_supergridpaper_energymix("ssp1-45", 2018, false, false, false,
+        indices=[2,3,5,6], runsuffix="_oct13",
+        extrasuffix=", solar=mid, battery=mid", ylims=(0,32))
+end
+
 # Figure 3 in the supergrid paper.
-function plot_supergridpaper_energymix(allowcsp=false, allownuclear=false, halftmcost=false;
-                                        cap=0.001, indices=collect(1:6), deletetechs=[1,2,6,7,12])
+function plot_supergridpaper_energymix(ssp="ssp2-34", datayear=2018, allowcsp=false,
+            allownuclear=false, halftmcost=false;
+            cap=0.001, indices=collect(1:6), deletetechs=[2,12],
+            runsuffix="_oct13", extrasuffix="", figoptions...)
     path = "D:\\model runs\\"
-    runsuffix = "_apr14"
     resultsfile = "$(path)supergridruns$runsuffix.jld2"
+    oldresults = (runsuffix == "_apr14")
     # indices = (cap >= 0.1 || allownuclear) ? collect(1:6) : [2,3,5,6]
     if allownuclear
         indices = indices[indices .<= 3]
     end
     scen = ["R", "C", "S", "R-Hland", "C-Hland", "S-Hland"][indices]
-    resultsnames = [runname(1, :none, cap, allowcsp, allownuclear, halftmcost),
-                    runname(1, :islands, cap, allowcsp, allownuclear, halftmcost),
-                    runname(1, :all, cap, allowcsp, allownuclear, halftmcost),
-                    runname(2, :none, cap, allowcsp, allownuclear, halftmcost),
-                    runname(2, :islands, cap, allowcsp, allownuclear, halftmcost),
-                    runname(2, :all, cap, allowcsp, allownuclear, halftmcost)][indices]
+    resultsnames = [
+        runname(1, :none, cap, ssp, datayear, allowcsp, allownuclear, halftmcost; oldresults=oldresults),
+        runname(1, :islands, cap, ssp, datayear, allowcsp, allownuclear, halftmcost; oldresults=oldresults),
+        runname(1, :all, cap, ssp, datayear, allowcsp, allownuclear, halftmcost; oldresults=oldresults),
+        runname(2, :none, cap, ssp, datayear, allowcsp, allownuclear, halftmcost; oldresults=oldresults),
+        runname(2, :islands, cap, ssp, datayear, allowcsp, allownuclear, halftmcost; oldresults=oldresults),
+        runname(2, :all, cap, ssp, datayear, allowcsp, allownuclear, halftmcost; oldresults=oldresults)
+    ][indices] .* extrasuffix
     cap1000 = round(Int, 1000*cap)
-    titletext = "CSP " * (allowcsp ? "" : "not ") * "allowed" * (halftmcost ? ", half transmission cost" : "") *
-                    (allownuclear ? ", nuclear allowed" : "") * ", $cap1000 g CO<sub>2</sub>/kWh"
-    plot_energymix(scen, resultsnames, resultsfile; size=(200+100*length(indices), 550), title=titletext, deletetechs=deletetechs)
+    titletext = "CSP " * (allowcsp ? "" : "not ") * "allowed" *
+        (halftmcost ? ", half transmission cost" : "") *
+        (allownuclear ? ", nuclear allowed" : "") * 
+        ", $cap1000 g CO<sub>2</sub>/kWh" * 
+        (oldresults ? " [old results]" : " [$ssp, $datayear]")
+    plot_energymix(scen, resultsnames, resultsfile; size=(200+100*length(indices), 550),
+        title=titletext, deletetechs=deletetechs, figoptions...)
     # plot_energymix(["default land", "high land"],
     #     ["regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, disabletechs=Symbol[:csp], islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21], solar=low, battery=high",
     #      "regionset=Eurasia21, transmissionallowed=islands, nuclearallowed=false, carboncap=0.001, solarwindarea=2, disabletechs=Symbol[:csp], islandindexes=UnitRange{Int64}[1:8, 9:15, 16:21], solar=low, battery=high"],
@@ -371,9 +470,9 @@ function plot_energymix(scen, resultsnames, resultsfile; deletetechs=[], optionl
     techlabels = permutedims(deleteat!(vec(techlabels), deletetechs))
     deleteat!(displayorder, deletetechs)
 
-    stackedbar(collect(scenelec[displayorder,:]')/1e6; label=techlabels, size=(600,550), left_margin=20px,
+    stackedbar(collect(scenelec[displayorder,:]')/1e6; label=string.(techlabels), size=(600,550), left_margin=20px,
         xticks=(1:length(scen),scen), line=0, tickfont=12, legendfont=12, guidefont=12, color_palette=palette,
-        ylabel="[PWh/year]", optionlist...)
+        ylabel="[PWh/year]", legend=:outertopright, optionlist...)
     xpos = (1:length(scen))'
     lab = fill("",(1,length(scen)))
     lab[1] = "demand"
@@ -381,7 +480,7 @@ function plot_energymix(scen, resultsnames, resultsfile; deletetechs=[], optionl
     nothing
 end
 
-function regionalcosts(allowcsp=false, allownuclear=false, halftmcost=false; cap=0.001, indices=collect(1:6), runsuffix="_apr14")
+function regionalcosts(ssp="ssp2-34", allowcsp=false, allownuclear=false, halftmcost=false; cap=0.001, indices=collect(1:6), runsuffix="_apr14")
     path = "D:\\model runs\\"
     resultsfile = "$(path)supergridruns$runsuffix.jld2"
     # indices = (cap >= 0.1 || allownuclear) ? collect(1:6) : [2,3,5,6]
@@ -390,12 +489,12 @@ function regionalcosts(allowcsp=false, allownuclear=false, halftmcost=false; cap
     end
     islandindexes=[1:8, 9:15, 16:21, 1:21]
     scen = ["R", "C", "S", "R-Hland", "C-Hland", "S-Hland"][indices]
-    resultsnames = [runname(1, :none, cap, allowcsp, allownuclear, halftmcost),
-                    runname(1, :islands, cap, allowcsp, allownuclear, halftmcost),
-                    runname(1, :all, cap, allowcsp, allownuclear, halftmcost),
-                    runname(2, :none, cap, allowcsp, allownuclear, halftmcost),
-                    runname(2, :islands, cap, allowcsp, allownuclear, halftmcost),
-                    runname(2, :all, cap, allowcsp, allownuclear, halftmcost)][indices]
+    resultsnames = [runname(1, :none, cap, ssp, allowcsp, allownuclear, halftmcost),
+                    runname(1, :islands, cap, ssp, allowcsp, allownuclear, halftmcost),
+                    runname(1, :all, cap, ssp, allowcsp, allownuclear, halftmcost),
+                    runname(2, :none, cap, ssp, allowcsp, allownuclear, halftmcost),
+                    runname(2, :islands, cap, ssp, allowcsp, allownuclear, halftmcost),
+                    runname(2, :all, cap, ssp, allowcsp, allownuclear, halftmcost)][indices]
     for resultname in resultsnames
         println(resultname, " ", resultsfile)
         r = loadresults(resultname, resultsfile=resultsfile)
