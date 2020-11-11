@@ -161,7 +161,7 @@ function analyzeresults(results::Results)
 
             lr = length(REGION)
             stackedbar(String.(REGION), collect(annualelec[displayorder,1:end-1]'/1000); labels=techlabels, size=(340+70*lr,550), left_margin=25px,
-                line=0, tickfont=10, legendfont=14, guidefont=14, color_palette=palette, ylabel="TWh/year", yformatter=:plain, optionlist...)
+                legend=:outertopright, line=0, tickfont=10, legendfont=14, guidefont=14, color_palette=palette, ylabel="TWh/year", yformatter=:plain, optionlist...)
 
             xpos = (1:lr)' .- 0.5
             demandtext = ["demand" permutedims(repeat([""],lr-1))]
@@ -170,7 +170,7 @@ function analyzeresults(results::Results)
             if lr == 21
                 totelec = [sumdimdrop(annualelec[:,1:8],dims=2) sumdimdrop(annualelec[:,9:15],dims=2) sumdimdrop(annualelec[:,16:21],dims=2) annualelec[:,:TOTAL]]
                 stackedbar(["EU","CAS","China","TOTAL"], collect(totelec[displayorder,:]'/1e3); labels=techlabels, left_margin=20px,
-                        size=(500,950), line=0, tickfont=14, legendfont=14, color_palette=palette, yformatter=:plain, optionlist...)
+                    legend=:outertopright, size=(500,950), line=0, tickfont=14, legendfont=14, color_palette=palette, yformatter=:plain, optionlist...)
                 xpos = (1:4)' .- 0.5
                 totdemand = [sum(demand[1:8,:]) sum(demand[9:15,:]) sum(demand[16:21,:]) sum(demand)]
                 display(plot!([xpos; xpos], [zeros(4)'; totdemand*hoursperperiod/1e3], line=3, color=:black, labels=permutedims(repeat([""],4))))
