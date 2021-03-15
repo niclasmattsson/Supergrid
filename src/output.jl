@@ -175,8 +175,9 @@ function analyzeresults(results::Results)
                 totdemand = [sum(demand[1:8,:]) sum(demand[9:15,:]) sum(demand[16:21,:]) sum(demand)]
                 display(plot!([xpos; xpos], [zeros(4)'; totdemand*hoursperperiod/1e3], line=3, color=:black, labels=permutedims(repeat([""],4))))
                 totcost2 = [sum(Systemcost[1:8]) sum(Systemcost[9:15]) sum(Systemcost[16:21]) sum(Systemcost)]
-                lcoe_tot = NamedArray(totcost2./totdemand * 1000, (["system cost (€/MWh)"], ["EU","CAS","China","TOTAL"]))
-                println("\nSystem cost per MWh demand (€/MWh):  (subtract existinghydro, see code above)")
+                tothydro = [sum(existinghydro[1:8]) sum(existinghydro[9:15]) sum(existinghydro[16:21]) sum(existinghydro)]
+                lcoe_tot = NamedArray(totcost2./(totdemand .- tothydro) * 1000, (["system cost (€/MWh)"], ["EU","CAS","China","TOTAL"]))
+                println("\nSystem cost per MWh demand (€/MWh):")
                 display(round.(lcoe_tot, digits=2))
             else
                 stackedbar(["TOTAL"], collect(annualelec[displayorder,:TOTAL]')/1e3; labels=techlabels, left_margin=30px,
